@@ -1,0 +1,161 @@
+service: ds-predict
+
+variablesResolutionMode: 20210326
+
+plugins:
+  - serverless-stage-manager
+  - serverless-plugin-warmup
+
+custom:
+  stages:
+    - dev
+    - staging
+    - prod
+  warmup:
+    default:
+      enabled: true
+      prewarm: true
+      timeout: 30
+      name: ${self:provider.stage}-ds-predict-warmer
+      concurrency: ${self:custom.warmupConcurrency.${self:provider.stage}}
+      role: ${opt:role, 'arn:aws:iam::044086777883:role/dataAnalyticsLambdaRole'}
+  warmupConcurrency:
+    dev: 1
+    staging: 1
+    prod: 10
+  mongoHost:
+    dev: dev-cluster.fg2e5.mongodb.net
+    staging: stg-cluster-pl-0.7ljem.mongodb.net
+    prod: prd-cluster-pl-0.5rvfa.mongodb.net
+  mongoPassword:
+    dev: ${ssm:dev-data-analytics-mongodb-password}
+    staging: ${ssm:staging-data-analytics-mongodb-password}
+    prod: ${ssm:prod-data-analytics-mongodb-password}
+  securityGroup:
+    dev: sg-0a85d287510c750fb
+    staging: sg-0a676a88fdcd07038
+    prod: sg-02f9c88c7e05b1f05
+  subnetAzA:
+    dev: subnet-06dd909aac8fd1948
+    staging: subnet-07a1a18b1527f00c7
+    prod: subnet-0290592d406bccc27
+  subnetAzB:
+    dev: subnet-08688e4403d21037e
+    staging: subnet-0587b148568217c70
+    prod: subnet-0790d32929fd45c33
+  subnetAzC:
+    dev: subnet-074ee31c582c2cbfa
+    staging: subnet-0685f5c67f247769a
+    prod: subnet-03aeae9f13764217c
+  subnetAzD:
+    dev: subnet-0734c25674eded0ac
+    staging: subnet-01ebaa837f7ed8258
+    prod: subnet-0e59ee98c9d5c760e
+  subnetAzE:
+    dev: subnet-086b2062d3bfb6fa1
+    staging: subnet-0401577626c6d60e7
+    prod: subnet-03000365f0e4a2cf2
+  subnetAzF:
+    dev: subnet-0a3704862892675cb
+    staging: subnet-081ef1e25f7f56a09
+    prod: subnet-01ce362ad1c488b27
+  postsEventBus:
+    dev: 614b4cb6b23f417e5e559c3f
+    staging: 614b4cb6b23f417e5e559c3f
+    prod: 614b4cb6b23f417e5e559c3f
+  uxSessionStartEventBus:
+    dev: 615401a5cf5aeb8af6e146a4
+    staging: 615401a5cf5aeb8af6e146a4
+    prod: 615401a5cf5aeb8af6e146a4
+  contentStatsUpdateEventBus:
+    dev: 61540f2ebf5a3119b91b6497
+    staging: 61540f2ebf5a3119b91b6497
+    prod: 61540f2ebf5a3119b91b6497
+  creatorStatsUpdateEventBus:
+    dev: 61540f9dac3a15f38bc8faa1
+    staging: 61540f9dac3a15f38bc8faa1
+    prod: 61540f9dac3a15f38bc8faa1
+  hashtagStatsUpdateEventBus:
+    dev: 61541005cf5aeb8af6e7e70f
+    staging: 61541005cf5aeb8af6e7e70f
+    prod: 61541005cf5aeb8af6e7e70f
+  userInsertEventBus:
+    dev: 616af85670473219e6dc15e8
+    staging: 616af85670473219e6dc15e8
+    prod: 616af85670473219e6dc15e8
+  contentStatsEventBus:
+    dev: 616af95670473219e6dcabd0
+    staging: 616af95670473219e6dcabd0
+    prod: 616af95670473219e6dcabd0
+  aggregatorTestEventBus:
+    dev: 616af9c13ef907d00d135e33
+    staging: 616af9c13ef907d00d135e33
+    prod: 616af9c13ef907d00d135e33
+  userStatsEventBus:
+    dev: 616c720770473219e696b055
+    staging: 616c720770473219e696b055
+    prod: 616c720770473219e696b055
+  perCtTrainerEventBus:
+    dev: 618de22cb0acf0b1a0ffdc47
+    staging: 618de22cb0acf0b1a0ffdc47
+    prod: 618de22cb0acf0b1a0ffdc47
+
+provider:
+  name: aws
+  lambdaHashingVersion: 20201221
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  memorySize: 256
+  timeout: 900
+  stackName: ${self:provider.stage}-ds-predict
+  logRetentionInDays: 14
+  deploymentBucket:
+    name: castcle-data-analytics
+  iam:
+    role: ${opt:role, 'arn:aws:iam::044086777883:role/dataAnalyticsLambdaRole'}
+  vpc:
+    securityGroupIds:
+      - ${self:custom.securityGroup.${self:provider.stage}}
+    subnetIds:
+      - ${self:custom.subnetAzA.${self:provider.stage}}
+      - ${self:custom.subnetAzB.${self:provider.stage}}
+      - ${self:custom.subnetAzC.${self:provider.stage}}
+      - ${self:custom.subnetAzD.${self:provider.stage}}
+      - ${self:custom.subnetAzE.${self:provider.stage}}
+      - ${self:custom.subnetAzF.${self:provider.stage}}
+  ecr:
+    images:
+      app_image:
+        uri: REPOSITORY_URI@DIGEST
+  environment:
+    ENV: ${self:provider.stage}
+    MONGO_HOST: ${self:custom.mongoHost.${self:provider.stage}}
+    MONGO_PASSWORD: ${self:custom.mongoPassword.${self:provider.stage}}
+
+functions:
+  perCtPredictor:
+    name: ${self:provider.stage}-ds-predict-per-ct-predictor
+    memorySize: 2048
+    warmup:
+      default:
+        enabled: true
+    image:
+      name: app_image
+      command:
+        - per_ct_predictor.handle
+    events:
+      - http:
+          cors: true
+          path: "per-ct-predictor"
+          method: post
+  coldStartPredictor:
+    name: ${self:provider.stage}-ds-predict-coldstart-predictor
+    warmup:
+      default:
+        enabled: false
+    image:
+      name: app_image
+      command:
+        - coldstart_predictor.handle
+    events:
+      - schedule: cron(*/5 * * * ? *)
