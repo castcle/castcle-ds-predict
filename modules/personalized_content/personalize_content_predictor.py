@@ -174,9 +174,11 @@ def personalized_content_predict_main(event,
     
     # 5. save result
     #! upsert results to destination collection
-    save_feed_to_mongodb(user_id,
-                         content_id_list,
-                         prediction_score,
+    save_feed_to_mongodb(
+        				 mongo_client=mongo_client,
+        				 user_id=user_id,
+                         content_id_list=content_id_list,
+                         prediction_score=prediction_score,
                          dst_database_name=dst_database_name,
                          dst_collection_name=dst_collection_name)
 
