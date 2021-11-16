@@ -135,7 +135,7 @@ provider:
 functions:
   perCtPredictor:
     name: ${self:provider.stage}-ds-predict-per-ct-predictor
-    memorySize: 2048
+    memorySize: 1024
     warmup:
       default:
         enabled: true

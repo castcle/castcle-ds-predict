@@ -9,3 +9,14 @@ def handle(event, context):
         return
 
     print(json.dumps(event, indent=4))
+    
+    from modules.coldstart_prediction.coldstart_predictor \
+        import coldstart_predictor_main
+        
+    coldstart_predictor_main(client=mongo_client)
+    
+    print('prediction of coldstart: ',' completed')
+
+    return {
+        "statusCode": 200
+    }
