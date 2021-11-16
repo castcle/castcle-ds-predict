@@ -8,7 +8,8 @@ import pandas as pd
 import xgboost as xgb
 
 # define load model artifact to database function
-def load_model_from_mongodb(src_database_name: str,
+def load_model_from_mongodb(mongo_client, 
+                            src_database_name: str,
                             src_collection_name: str, 
                             model_name: str, 
                             account_id, #! using user id, in future version change to account id
@@ -33,7 +34,9 @@ def load_model_from_mongodb(src_database_name: str,
     return pickle.loads(pickled_model)
 
 # define feature preparation function from content id list
-def prepare_features(content_id_list,
+def prepare_features( 
+                     content_id_list,
+                     mongo_client,
                      analytics_db: str,
                      content_stats_collection: str,
                      creator_stats_collection: str):
@@ -92,12 +95,15 @@ def prepare_features(content_id_list,
 
     # assign result to dataframe
     # alias 'contentFeatures_1'
-    content_features = pd.DataFrame(list(mongo_client[analytics_db][content_stats_collection].aggregate(contentFeaturesCursor))).rename({'_id':'contentId'},axis = 1)
+    content_features = pd.DataFrame(
+        list(mongo_client[analytics_db][content_stats_collection].aggregate(contentFeaturesCursor)))\
+            .rename({'_id':'contentId'},axis = 1)
     
     return content_features
 
 # define save feed item function
-def save_feed_to_mongodb(user_id,
+def save_feed_to_mongodb(mongo_client, 
+                         user_id,
                          content_id_list,
                          prediction_score,
                          dst_database_name: str,
@@ -120,6 +126,7 @@ def save_feed_to_mongodb(user_id,
 
 # define main function
 def personalized_content_predict_main(event,
+                                      mongo_client,
                                       src_database_name = 'analytics-db',
                                       src_collection_name = 'mlArtifacts',
                                       analytics_db = 'analytics-db',
@@ -134,25 +141,36 @@ def personalized_content_predict_main(event,
     user_id = ObjectId(event.get('userId', None))
     
     #! convert to object id
-    content_id_list = [ObjectId(content) for content in event.get('contents', None)]
+    contents_list = event.get('contents', None)
+    # If has contents
+    if len(contents_list) > 0:
+    	content_id_list = [ObjectId(content) for content in contents_list]
+    # No contents with this userId
+    elif len(contents_list) == 0:
+        raise NotImplementedError
     
     # 2. loading model
     # perform model loading function
-    xg_reg = load_model_from_mongodb(src_database_name=src_database_name,
+    xg_reg = load_model_from_mongodb(mongo_client=mongo_client, 
+                                     src_database_name=src_database_name,
                                      src_collection_name= src_collection_name,
                                      model_name= model_name,
                                      account_id=user_id) # tend to change name
     
     # 3. preparation
     # prepare_features
-    content_features = prepare_features(content_id_list,
+    content_features = prepare_features(
+        			   content_id_list, 
+			 		   mongo_client=mongo_client,
                        analytics_db = analytics_db,
                        content_stats_collection = content_stats_collection,
                        creator_stats_collection = creator_stats_collection)
+    if 'contentId' in content_features.columns():
+    	content_features = content_features.drop('contentId', axis = 1)
     
     # 4. prediction
     # define result format
-    prediction_score = [float(score) for score in (xg_reg.predict(features.drop('contentId', axis = 1)))]
+    prediction_score = [float(score) for score in (xg_reg.predict(content_features))]
     
     # 5. save result
     #! upsert results to destination collection
