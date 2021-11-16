@@ -145,7 +145,7 @@ def personalized_content_predict_main(event,
     # If has contents
     if len(contents_list) > 0:
     	content_id_list = [ObjectId(content) for content in contents_list]
-    # No contents with this userId
+    # If no contents with this userId
     elif len(contents_list) == 0:
         raise NotImplementedError
     
@@ -165,7 +165,7 @@ def personalized_content_predict_main(event,
                        analytics_db = analytics_db,
                        content_stats_collection = content_stats_collection,
                        creator_stats_collection = creator_stats_collection)
-    if 'contentId' in content_features.columns():
+    if 'contentId' in content_features.columns:
     	content_features = content_features.drop('contentId', axis = 1)
     
     # 4. prediction
