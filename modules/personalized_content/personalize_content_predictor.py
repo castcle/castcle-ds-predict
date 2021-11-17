@@ -154,13 +154,14 @@ def personalized_content_predict_main(event,
     # define result format
     prediction_score = [float(score) for score in (xg_reg.predict(features.drop('contentId', axis = 1)))]
     
-    # 5. save result
-    #! upsert results to destination collection
-    save_feed_to_mongodb(user_id,
-                         content_id_list,
-                         prediction_score,
-                         dst_database_name=dst_database_name,
-                         dst_collection_name=dst_collection_name)
-
+    # # 5. save result
+    # #! upsert results to destination collection
+    # save_feed_to_mongodb(user_id,
+    #                      content_id_list,
+    #                      prediction_score,
+    #                      dst_database_name=dst_database_name,
+    #                      dst_collection_name=dst_collection_name)
     
-    return None
+    # return None
+
+    return prediction_score
