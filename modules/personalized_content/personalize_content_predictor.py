@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import xgboost as xgb
 
-# define load model artifact to database function
+## define load model artifact to database function
 def load_model_from_mongodb(src_database_name: str,
                             src_collection_name: str, 
                             model_name: str, 
@@ -97,7 +97,7 @@ def prepare_features(content_id_list,
     return content_features
 
 # define save feed item function
-def save_feed_to_mongodb(user_id,
+def save_feed_to_mongodb(account_id,
                          content_id_list,
                          prediction_score,
                          dst_database_name: str,
@@ -106,10 +106,10 @@ def save_feed_to_mongodb(user_id,
 
     document = mongo_client[dst_database_name][dst_collection_name].update_one(
         {
-            'viewer': user_id
+            'viewer': account_id
         }, {
             '$set': {
-                'viewer': user_id,
+                'viewer': account_id,
                 'contents': content_id_list,
                 'prediction_score': prediction_score,
                 'scoredAt': datetime.utcnow()
@@ -117,6 +117,17 @@ def save_feed_to_mongodb(user_id,
         }, upsert= True)
 
     return None
+
+def convert_lists_to_dict(contents_id_list, 
+                          prediction_scores):
+    
+    result = {}
+    
+    for index, _ in enumerate(prediction_scores):
+    
+        result[contents_id_list[index]] = prediction_scores[index]
+    
+    return result
 
 # define main function
 def personalized_content_predict_main(event,
@@ -131,7 +142,7 @@ def personalized_content_predict_main(event,
     
     # 1. get input
     #! convert to object id
-    user_id = ObjectId(event.get('userId', None))
+    account_id = ObjectId(event.get('accountId', None))
     
     #! convert to object id
     content_id_list = [ObjectId(content) for content in event.get('contents', None)]
@@ -141,7 +152,7 @@ def personalized_content_predict_main(event,
     xg_reg = load_model_from_mongodb(src_database_name=src_database_name,
                                      src_collection_name= src_collection_name,
                                      model_name= model_name,
-                                     account_id=user_id) # tend to change name
+                                     account_id=account_id) # tend to change name
     
     # 3. preparation
     # prepare_features
@@ -152,16 +163,14 @@ def personalized_content_predict_main(event,
     
     # 4. prediction
     # define result format
-    prediction_score = [float(score) for score in (xg_reg.predict(features.drop('contentId', axis = 1)))]
+    prediction_scores = [float(score) for score in (xg_reg.predict(content_features.drop('contentId', axis = 1)))]
     
-    # # 5. save result
-    # #! upsert results to destination collection
-    # save_feed_to_mongodb(user_id,
-    #                      content_id_list,
-    #                      prediction_score,
-    #                      dst_database_name=dst_database_name,
-    #                      dst_collection_name=dst_collection_name)
+    # 5. construct result schema
+    result = convert_lists_to_dict(contents_id_list = event.get('contents', None), 
+                                   prediction_scores = prediction_scores)
+    response = {
+        'statusCode': 200,
+        'result': result
+    }
     
-    # return None
-
-    return prediction_score
+    return response

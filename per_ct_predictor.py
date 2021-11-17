@@ -2,15 +2,14 @@ import json
 from mongo_client import ping_mongodb, mongo_client
 
 
-#! simulate mocked event
-## following creator's content
-event = {
-    'userId': '6170067a51db852fb36d2109',
-    'contents': [
-        '6188a77b1ec609099d728303',
-        '6188ed841ec60953167283f4'
-    ]
-}
+# Example event schema
+# event = {
+#     'accountId': '6170063351db852b0e6d20fc',
+#     'contents': [
+#         '6188a77b1ec609099d728303',
+#         '6188ed841ec60953167283f4'
+#     ]
+# }
 
 def handle(event, context):
     if event.get("source") == "serverless-plugin-warmup":
@@ -34,9 +33,11 @@ def handle(event, context):
 
     print('prediction of content id: ', event.get('userId', None),' completed')
 
-    return {
-        'statusCode': 200,
-        'body': json.dumps({
-            'msg': 'Hi, there!'
-        })
-    }
+    # return {
+    #     'statusCode': 200,
+    #     'body': json.dumps({
+    #         'msg': 'Hi, there!'
+    #     })
+    # }
+
+    return response # change together with new result schema 2021-11-17 by coupon
