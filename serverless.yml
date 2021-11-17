@@ -152,7 +152,7 @@ functions:
     name: ${self:provider.stage}-ds-predict-coldstart-predictor
     warmup:
       default:
-        enabled: true
+        enabled: false
     image:
       name: app_image
       command:
