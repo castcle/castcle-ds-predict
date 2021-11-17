@@ -22,6 +22,7 @@ def handle(event, context):
     from modules.personalized_content.personalize_content_predictor import personalized_content_predict_main
 
     personalized_content_predict_main(event,
+                                      mongo_client,
                                       src_database_name = 'analytics-db',
                                       src_collection_name = 'mlArtifacts',
                                       analytics_db = 'analytics-db',

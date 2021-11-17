@@ -8,7 +8,8 @@ import pandas as pd
 import xgboost as xgb
 
 ## define load model artifact to database function
-def load_model_from_mongodb(src_database_name: str,
+def load_model_from_mongodb(mongo_client,
+                            src_database_name: str,
                             src_collection_name: str, 
                             model_name: str, 
                             account_id, #! using user id, in future version change to account id
@@ -33,7 +34,8 @@ def load_model_from_mongodb(src_database_name: str,
     return pickle.loads(pickled_model)
 
 # define feature preparation function from content id list
-def prepare_features(content_id_list,
+def prepare_features(mongo_client,
+                     content_id_list,
                      analytics_db: str,
                      content_stats_collection: str,
                      creator_stats_collection: str):
@@ -97,7 +99,8 @@ def prepare_features(content_id_list,
     return content_features
 
 # define save feed item function
-def save_feed_to_mongodb(account_id,
+def save_feed_to_mongodb(mongo_client,
+                         account_id,
                          content_id_list,
                          prediction_score,
                          dst_database_name: str,
@@ -131,14 +134,15 @@ def convert_lists_to_dict(contents_id_list,
 
 # define main function
 def personalized_content_predict_main(event,
-                                      src_database_name = 'analytics-db',
-                                      src_collection_name = 'mlArtifacts',
-                                      analytics_db = 'analytics-db',
-                                      creator_stats_collection = 'creatorStats',
-                                      content_stats_collection = 'contentStats',
-                                      dst_database_name = 'analytics-db',
-                                      dst_collection_name = 'feedItems_test',
-                                      model_name = 'xgboost'):
+                                      mongo_client,
+                                      src_database_name: str,
+                                      src_collection_name: str,
+                                      analytics_db: str,
+                                      creator_stats_collection: str,
+                                      content_stats_collection: str,
+                                      dst_database_name: str,
+                                      dst_collection_name: str,
+                                      model_name: str):
     
     # 1. get input
     #! convert to object id
@@ -149,23 +153,25 @@ def personalized_content_predict_main(event,
     
     # 2. loading model
     # perform model loading function
-    xg_reg = load_model_from_mongodb(src_database_name=src_database_name,
+    xg_reg = load_model_from_mongodb(mongo_client,
+                                     src_database_name=src_database_name,
                                      src_collection_name= src_collection_name,
                                      model_name= model_name,
                                      account_id=account_id) # tend to change name
     
     # 3. preparation
     # prepare_features
-    content_features = prepare_features(content_id_list,
-                       analytics_db = analytics_db,
-                       content_stats_collection = content_stats_collection,
-                       creator_stats_collection = creator_stats_collection)
+    content_features = prepare_features(mongo_client,
+                                        content_id_list,
+                                        analytics_db = analytics_db,
+                                        content_stats_collection = content_stats_collection,
+                                        creator_stats_collection = creator_stats_collection)
     
     # 4. prediction
     # define result format
     prediction_scores = [float(score) for score in (xg_reg.predict(content_features.drop('contentId', axis = 1)))]
     
-    # 5. construct result schema
+    # 5. construct result schemas
     result = convert_lists_to_dict(contents_id_list = event.get('contents', None), 
                                    prediction_scores = prediction_scores)
     response = {
