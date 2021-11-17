@@ -143,11 +143,6 @@ functions:
       name: app_image
       command:
         - per_ct_predictor.handle
-    events:
-      - http:
-          cors: true
-          path: "per-ct-predictor"
-          method: post
   coldStartPredictor:
     name: ${self:provider.stage}-ds-predict-coldstart-predictor
     warmup:
