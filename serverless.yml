@@ -152,10 +152,10 @@ functions:
     name: ${self:provider.stage}-ds-predict-coldstart-predictor
     warmup:
       default:
-        enabled: false
+        enabled: true
     image:
       name: app_image
       command:
         - coldstart_predictor.handle
     events:
-      - schedule: cron(*/5 * * * ? *)
+      - schedule: cron(*/60 * * * ? *)
