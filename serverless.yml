@@ -158,4 +158,4 @@ functions:
       command:
         - coldstart_predictor.handle
     events:
-      - schedule: cron(*/5 * * * ? *)
+      - schedule: cron(*/60 * * * ? *)
