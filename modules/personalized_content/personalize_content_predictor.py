@@ -7,8 +7,9 @@ from datetime import datetime, timedelta
 import pandas as pd
 import xgboost as xgb
 
+
 # define load model artifact to database function
-def load_model_from_mongodb(mongo_client, 
+def load_model_from_mongodb(mongo_client,
                             src_database_name: str,
                             src_collection_name: str, 
                             model_name: str, 
@@ -34,9 +35,8 @@ def load_model_from_mongodb(mongo_client,
     return pickle.loads(pickled_model)
 
 # define feature preparation function from content id list
-def prepare_features( 
-                     content_id_list,
-                     mongo_client,
+def prepare_features(mongo_client,
+                     content_id_list, 
                      analytics_db: str,
                      content_stats_collection: str,
                      creator_stats_collection: str):
@@ -95,15 +95,13 @@ def prepare_features(
 
     # assign result to dataframe
     # alias 'contentFeatures_1'
-    content_features = pd.DataFrame(
-        list(mongo_client[analytics_db][content_stats_collection].aggregate(contentFeaturesCursor)))\
-            .rename({'_id':'contentId'},axis = 1)
+    content_features = pd.DataFrame(list(mongo_client[analytics_db][content_stats_collection].aggregate(contentFeaturesCursor))).rename({'_id':'contentId'},axis = 1)
     
     return content_features
 
 # define save feed item function
-def save_feed_to_mongodb(mongo_client, 
-                         user_id,
+def save_feed_to_mongodb(mongo_client,
+                         account_id,
                          content_id_list,
                          prediction_score,
                          dst_database_name: str,
@@ -112,10 +110,10 @@ def save_feed_to_mongodb(mongo_client,
 
     document = mongo_client[dst_database_name][dst_collection_name].update_one(
         {
-            'viewer': user_id
+            'viewer': account_id
         }, {
             '$set': {
-                'viewer': user_id,
+                'viewer': account_id,
                 'contents': content_id_list,
                 'prediction_score': prediction_score,
                 'scoredAt': datetime.utcnow()
@@ -124,63 +122,62 @@ def save_feed_to_mongodb(mongo_client,
 
     return None
 
+def convert_lists_to_dict(contents_id_list, 
+                          prediction_scores):
+    
+    result = {}
+    
+    for index, _ in enumerate(prediction_scores):
+    
+        result[contents_id_list[index]] = prediction_scores[index]
+    
+    return result
+
 # define main function
 def personalized_content_predict_main(event,
                                       mongo_client,
-                                      src_database_name = 'analytics-db',
-                                      src_collection_name = 'mlArtifacts',
-                                      analytics_db = 'analytics-db',
-                                      creator_stats_collection = 'creatorStats',
-                                      content_stats_collection = 'contentStats',
-                                      dst_database_name = 'analytics-db',
-                                      dst_collection_name = 'feedItems_test',
-                                      model_name = 'xgboost'):
+                                      src_database_name: str,
+                                      src_collection_name: str,
+                                      analytics_db: str,
+                                      creator_stats_collection: str,
+                                      content_stats_collection: str,
+                                      dst_database_name: str,
+                                      dst_collection_name: str,
+                                      model_name: str):
     
     # 1. get input
     #! convert to object id
-    user_id = ObjectId(event.get('userId', None))
+    account_id = ObjectId(event.get('accountId', None))
     
     #! convert to object id
-    contents_list = event.get('contents', None)
-    # If has contents
-    if len(contents_list) > 0:
-    	content_id_list = [ObjectId(content) for content in contents_list]
-    # If no contents with this userId
-    elif len(contents_list) == 0:
-        raise NotImplementedError
+    content_id_list = [ObjectId(content) for content in event.get('contents', None)]
     
     # 2. loading model
     # perform model loading function
-    xg_reg = load_model_from_mongodb(mongo_client=mongo_client, 
+    xg_reg = load_model_from_mongodb(mongo_client,
                                      src_database_name=src_database_name,
                                      src_collection_name= src_collection_name,
                                      model_name= model_name,
-                                     account_id=user_id) # tend to change name
+                                     account_id=account_id) # tend to change name
     
     # 3. preparation
     # prepare_features
-    content_features = prepare_features(
-        			   content_id_list, 
-			 		   mongo_client=mongo_client,
-                       analytics_db = analytics_db,
-                       content_stats_collection = content_stats_collection,
-                       creator_stats_collection = creator_stats_collection)
-    if 'contentId' in content_features.columns:
-    	content_features = content_features.drop('contentId', axis = 1)
+    content_features = prepare_features(mongo_client,
+                                        content_id_list,
+                                        analytics_db = analytics_db,
+                                        content_stats_collection = content_stats_collection,
+                                        creator_stats_collection = creator_stats_collection)
     
     # 4. prediction
     # define result format
-    prediction_score = [float(score) for score in (xg_reg.predict(content_features))]
+    prediction_scores = [float(score) for score in (xg_reg.predict(content_features.drop('contentId', axis = 1)))]
     
-    # 5. save result
-    #! upsert results to destination collection
-    save_feed_to_mongodb(
-        				 mongo_client=mongo_client,
-        				 user_id=user_id,
-                         content_id_list=content_id_list,
-                         prediction_score=prediction_score,
-                         dst_database_name=dst_database_name,
-                         dst_collection_name=dst_collection_name)
-
+    # 5. construct result schemas
+    result = convert_lists_to_dict(contents_id_list = event.get('contents', None), 
+                                   prediction_scores = prediction_scores)
+    response = {
+        'statusCode': 200,
+        'result': result
+    }
     
-    return None
+    return response
