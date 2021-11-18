@@ -145,6 +145,7 @@ functions:
         - per_ct_predictor.handle
   coldStartPredictor:
     name: ${self:provider.stage}-ds-predict-coldstart-predictor
+    memorySize: 2048
     warmup:
       default:
         enabled: false
