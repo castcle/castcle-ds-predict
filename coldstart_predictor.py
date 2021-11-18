@@ -1,5 +1,6 @@
 import json
 from mongo_client import ping_mongodb, mongo_client
+import datetime
 
 
 def handle(event, context):
@@ -11,12 +12,13 @@ def handle(event, context):
     print(json.dumps(event, indent=4))
     
     from modules.coldstart_prediction.coldstart_predictor \
-        import coldstart_predictor_main
+        import coldstart_score_main
         
-    coldstart_predictor_main(client=mongo_client)
+    coldstart_score_main(client=mongo_client)
     
     print('prediction of coldstart: ',' completed')
 
     return {
-        "statusCode": 200
+        "statusCode": 200,
+        "predicted_at": str(datetime.datetime.now())
     }

@@ -1,6 +1,4 @@
-import logging
-
-def cold_start_by_counytry_scroing( client, 
+def cold_start_by_counytry_scroing( client,
                                     saved_model = 'mlArtifacts_country_test',
                                     saved_data = 'saved_prediction_country',
                                     saved_data_all = 'saved_prediction_country_accum',
@@ -32,7 +30,9 @@ def cold_start_by_counytry_scroing( client,
     
     saved_data_country_accum = analyticsDb[saved_data_all]
     
-
+    saved_data_country.drop()
+    saved_data_country_accum.drop()
+    
     def load_model_from_mongodb(collection, model_name, account):
         json_data = {}
         data = collection.find({
@@ -49,6 +49,7 @@ def cold_start_by_counytry_scroing( client,
     
     result = pd.DataFrame()
     for countryId in list(ml_set.account.unique()):
+        pprint(countryId)
         xg_reg_load = load_model_from_mongodb(collection=mlArtifacts_country,
                                      account= countryId,
                                      model_name= model_name)
@@ -58,36 +59,33 @@ def cold_start_by_counytry_scroing( client,
         a = pd.DataFrame(xg_reg_load.predict(content_test.drop(['_id'], axis = 1)), columns = ['predict'])
         b = contentFeatures[['_id']].reset_index(drop = True)
         c = pd.concat([b,a],axis =1).rename({'_id':'contentId'},axis = 1)
-        c['countryId'] = countryId
+        c['country_code'] = countryId
         c['Score_At'] = datetime.now() 
         c = c.sort_values(by='predict', ascending=False)
+        c = c.iloc[:2000,]
         result = result.append(c)  
 
         
-	# update collection
+     # update collection
     result.reset_index(inplace=False)
     data_dict = result.to_dict("records")
-    saved_data_country.remove({})
+    
     saved_data_country.insert_many(data_dict)
     
     saved_data_country_accum.insert_many(data_dict)
     
-    return None
+#saved_data_country.update_one({'countryId': countryId},{'$set':{"scoring_list":data_dict}},upsert= True)
 
-def coldstart_predictor_main(client, model_save_cllctn='mlArtifacts_country', 
-                   countryId: list=['CH', 'EN', 'GER', 'LA', 'PHI', 'SP', 'TH', 'USA', 'VET'], 
-                   model_name='xgboost', content_features='contentFeatures',
-                   input_engagement='transactionEngagements_country2'):
+    return
     
-    # 2 predict
-    cold_start_by_counytry_scroing( client,
+def coldstart_score_main(client):
+    cold_start_by_counytry_scroing( client, 
                                     saved_model = 'mlArtifacts_country_test',
                                     saved_data = 'saved_prediction_country',
                                     saved_data_all = 'saved_prediction_country_accum',
                                     content_features = 'contentFeatures',
                                     model_name = 'xgboost')
+    
 
     
-    logging.info('coldstart predicted')
-    
-    return None
+    return
