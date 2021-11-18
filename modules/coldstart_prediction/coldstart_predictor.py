@@ -30,8 +30,9 @@ def cold_start_by_counytry_scroing( client,
     
     saved_data_country_accum = analyticsDb[saved_data_all]
     
-    saved_data_country.drop()
-    saved_data_country_accum.drop()
+    # truncate collections before write
+    saved_data_country.remove({})
+    saved_data_country_accum.remove({})
     
     def load_model_from_mongodb(collection, model_name, account):
         json_data = {}
@@ -85,7 +86,5 @@ def coldstart_score_main(client):
                                     saved_data_all = 'saved_prediction_country_accum',
                                     content_features = 'contentFeatures',
                                     model_name = 'xgboost')
-    
-
     
     return
