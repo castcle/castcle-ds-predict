@@ -28,9 +28,9 @@ custom:
     staging: stg-cluster-pl-0.7ljem.mongodb.net
     prod: prd-cluster-pl-0.5rvfa.mongodb.net
   mongoPassword:
-    dev: ${ssm:dev-data-analytics-mongodb-password}
-    staging: ${ssm:staging-data-analytics-mongodb-password}
-    prod: ${ssm:prod-data-analytics-mongodb-password}
+    dev: ${ssm:dev-ds-mongodb-password}
+    staging: ${ssm:staging-ds-mongodb-password}
+    prod: ${ssm:prod-ds-mongodb-password}
   securityGroup:
     dev: sg-0a85d287510c750fb
     staging: sg-0a676a88fdcd07038
@@ -59,46 +59,6 @@ custom:
     dev: subnet-0a3704862892675cb
     staging: subnet-081ef1e25f7f56a09
     prod: subnet-01ce362ad1c488b27
-  postsEventBus:
-    dev: 614b4cb6b23f417e5e559c3f
-    staging: 614b4cb6b23f417e5e559c3f
-    prod: 614b4cb6b23f417e5e559c3f
-  uxSessionStartEventBus:
-    dev: 615401a5cf5aeb8af6e146a4
-    staging: 615401a5cf5aeb8af6e146a4
-    prod: 615401a5cf5aeb8af6e146a4
-  contentStatsUpdateEventBus:
-    dev: 61540f2ebf5a3119b91b6497
-    staging: 61540f2ebf5a3119b91b6497
-    prod: 61540f2ebf5a3119b91b6497
-  creatorStatsUpdateEventBus:
-    dev: 61540f9dac3a15f38bc8faa1
-    staging: 61540f9dac3a15f38bc8faa1
-    prod: 61540f9dac3a15f38bc8faa1
-  hashtagStatsUpdateEventBus:
-    dev: 61541005cf5aeb8af6e7e70f
-    staging: 61541005cf5aeb8af6e7e70f
-    prod: 61541005cf5aeb8af6e7e70f
-  userInsertEventBus:
-    dev: 616af85670473219e6dc15e8
-    staging: 616af85670473219e6dc15e8
-    prod: 616af85670473219e6dc15e8
-  contentStatsEventBus:
-    dev: 616af95670473219e6dcabd0
-    staging: 616af95670473219e6dcabd0
-    prod: 616af95670473219e6dcabd0
-  aggregatorTestEventBus:
-    dev: 616af9c13ef907d00d135e33
-    staging: 616af9c13ef907d00d135e33
-    prod: 616af9c13ef907d00d135e33
-  userStatsEventBus:
-    dev: 616c720770473219e696b055
-    staging: 616c720770473219e696b055
-    prod: 616c720770473219e696b055
-  perCtTrainerEventBus:
-    dev: 618de22cb0acf0b1a0ffdc47
-    staging: 618de22cb0acf0b1a0ffdc47
-    prod: 618de22cb0acf0b1a0ffdc47
 
 provider:
   name: aws
