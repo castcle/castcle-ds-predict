@@ -1,0 +1,11 @@
+__pycache__/
+.serverless/
+node_modules/
+.gitignore
+.npmignore
+Dockerfile
+package-lock.json
+package.json
+serverless.yml
+README.md
+buildspec.yml

@@ -1,0 +1,22 @@
+{
+  "name": "prediction-api",
+  "version": "1.0.0",
+  "description": "Castcle predict feed",
+  "main": "index.js",
+  "scripts": {
+    "remove": "serverless remove",
+    "deploy": "serverless deploy"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com-castcle:castcle/castcle-ds-predict.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "serverless": "^2.66.1",
+    "serverless-plugin-warmup": "^6.0.0",
+    "serverless-stage-manager": "^1.0.5"
+  }
+}
