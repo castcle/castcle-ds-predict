@@ -46,7 +46,7 @@ def prepare_features(mongo_client,
         {
             # filter for only correspond contents
             '$match': {
-                '_id': {
+                'contentId': {
                     '$in': content_id_list 
                 }
             }
@@ -68,6 +68,7 @@ def prepare_features(mongo_client,
             # map output format
             '$project': {
                 '_id': 1,
+                'contentId': 1,
                 'likeCount': 1,
                 'commentCount': 1,
                 'recastCount': 1,
@@ -80,15 +81,6 @@ def prepare_features(mongo_client,
                 'creatorRecastedCount': '$creatorStats.creatorRecastedCount',
                 'creatorQuotedCount': '$creatorStats.creatorQuotedCount',
                 'ageScore': '$aggregator.ageScore'
-#                 # alias 'total label'
-#                 'engagements': {
-#                     '$sum': [
-#                         '$likeCount', 
-#                         '$commentCount',
-#                         '$recastCount',
-#                         '$quoteCount'
-#                     ]
-#                 }
             }
         }
     ]
