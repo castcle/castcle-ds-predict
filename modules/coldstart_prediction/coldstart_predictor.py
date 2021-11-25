@@ -116,7 +116,7 @@ def cold_start_by_counytry_scroing( client,
         b = contentFeatures[['contentId']].reset_index(drop = True)
         c = pd.concat([b,a],axis =1)
         c['countryCode'] = countryId
-        c['Score_At'] = datetime.now() 
+        c['Score_At'] = datetime.utcnow() 
         c = c.sort_values(by='predict', ascending=False)
         c = c.iloc[:2000,]
         result = result.append(c)  
