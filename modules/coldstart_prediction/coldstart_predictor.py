@@ -3,16 +3,20 @@ def cold_start_by_counytry_scroing( client,
                                     saved_data = 'saved_prediction_country',
                                     saved_data_all = 'saved_prediction_country_accum',
                                     model_name = 'xgboost'):
+    
+    import sklearn
     import pandas as pd
     import json
     import xgboost as xgb
+    import bson.objectid
     import pickle
     from datetime import datetime
     from pprint import pprint
     import numpy as np
 
+    appDb = client['app-db']
     analyticsDb = client['analytics-db']
- 
+
     def prepare_features(mongo_client, 
                      analytics_db: str,
                      content_stats_collection: str,
@@ -78,7 +82,7 @@ def cold_start_by_counytry_scroing( client,
     mlArtifacts_country = analyticsDb[saved_model]
     ml_set = pd.DataFrame(list(mlArtifacts_country.find()))
     
-    saved_data_country = analyticsDb[saved_data]
+    saved_data_country = appDb[saved_data]
     
     saved_data_country_accum = analyticsDb[saved_data_all]
     
@@ -111,7 +115,7 @@ def cold_start_by_counytry_scroing( client,
         a = pd.DataFrame(xg_reg_load.predict(content_test.drop(['contentId'], axis = 1)), columns = ['predict'])
         b = contentFeatures[['contentId']].reset_index(drop = True)
         c = pd.concat([b,a],axis =1)
-        c['country_code'] = countryId
+        c['countryCode'] = countryId
         c['Score_At'] = datetime.now() 
         c = c.sort_values(by='predict', ascending=False)
         c = c.iloc[:2000,]
@@ -126,15 +130,16 @@ def cold_start_by_counytry_scroing( client,
     
     saved_data_country_accum.insert_many(data_dict)
     
+    #saved_data_country.update_one({'countryId': countryId},{'$set':{"scoring_list":data_dict}},upsert= True)
+    
     return
     
 def coldstart_score_main(client):  
     
     cold_start_by_counytry_scroing( client,
                                     saved_model = 'mlArtifacts_country',
-                                    saved_data = 'saved_prediction_country',
+                                    saved_data = 'guestfeeditems',
                                     saved_data_all = 'saved_prediction_country_accum',
                                     model_name = 'xgboost')
-    
     
     return
