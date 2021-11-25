@@ -112,12 +112,15 @@ def cold_start_by_counytry_scroing( client,
 
         content_test = contentFeatures
     
-        a = pd.DataFrame(xg_reg_load.predict(content_test.drop(['contentId'], axis = 1)), columns = ['predict'])
+        a = pd.DataFrame(xg_reg_load.predict(content_test.drop(['contentId'], axis = 1)), columns = ['score'])
         b = contentFeatures[['contentId']].reset_index(drop = True)
         c = pd.concat([b,a],axis =1)
         c['countryCode'] = countryId
-        c['Score_At'] = datetime.utcnow() 
-        c = c.sort_values(by='predict', ascending=False)
+        c['type'] = "content"
+        c['updatedAt'] = datetime.utcnow() 
+        c['createdAt'] = datetime.utcnow() 
+        c = c.rename({"contentId":"content"},axis = 1)
+        c = c.sort_values(by='score', ascending=False)
         c = c.iloc[:2000,]
         result = result.append(c)  
 
@@ -131,15 +134,16 @@ def cold_start_by_counytry_scroing( client,
     saved_data_country_accum.insert_many(data_dict)
     
     #saved_data_country.update_one({'countryId': countryId},{'$set':{"scoring_list":data_dict}},upsert= True)
-    
+
     return
     
-def coldstart_score_main(client):  
-    
+def coldstart_score_main(client):
     cold_start_by_counytry_scroing( client,
                                     saved_model = 'mlArtifacts_country',
                                     saved_data = 'guestfeeditems',
                                     saved_data_all = 'saved_prediction_country_accum',
                                     model_name = 'xgboost')
+    
+
     
     return
