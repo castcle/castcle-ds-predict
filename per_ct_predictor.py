@@ -16,10 +16,11 @@ def handle(event, context):
                                       src_database_name = 'analytics-db',
                                       src_collection_name = 'mlArtifacts',
                                       analytics_db = 'analytics-db',
+                                      app_db = 'app-db',
+                                      account_collection = 'accounts',
+                                      ml_arifact_country_collection = 'mlArtifacts_country',
                                       creator_stats_collection = 'creatorStats',
                                       content_stats_collection = 'contentStats',
-                                      dst_database_name = 'analytics-db',
-                                      dst_collection_name = 'feedItems_test',
                                       model_name = 'xgboost')
 
     print('prediction of content id: ', event.get('accountId', None),' completed')
