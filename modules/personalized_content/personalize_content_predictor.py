@@ -1,14 +1,12 @@
-import os
-import json
 import pickle
-import bson.objectid
 from bson import ObjectId
 from datetime import datetime, timedelta
 import pandas as pd
 import xgboost as xgb
 
 # define existence of mlAritact of user function
-def account_artifact_checker(src_database_name: str,
+def account_artifact_checker(mongo_client,
+                             src_database_name: str,
                              src_collection_name: str, 
                              account_id):
     
@@ -18,7 +16,8 @@ def account_artifact_checker(src_database_name: str,
     return existence
 
 # define function to get country code of the account
-def get_country_code(account_id,
+def get_country_code(mongo_client,
+                     account_id,
                      app_db: str,
                      account_collection: str):
     
@@ -146,9 +145,10 @@ def personalized_content_predict_main(event,
     content_id_list = [ObjectId(content) for content in event.get('contents', None)]
 
     # check existence of personalize content artifact of the account 
-    existence = account_artifact_checker(src_database_name=src_database_name,
-                        src_collection_name=src_collection_name, 
-                        account_id=account_id)
+    existence = account_artifact_checker(mongo_client,
+                                         src_database_name=src_database_name,
+                                         src_collection_name=src_collection_name, 
+                                         account_id=account_id)
     
     # 2. loading model
     # case mlArtifacts exists
@@ -159,10 +159,10 @@ def personalized_content_predict_main(event,
         
         # perform model loading function
         xg_reg = load_model_from_mongodb(mongo_client,
-                                     src_database_name=src_database_name,
-                                     src_collection_name= src_collection_name,
-                                     model_name= model_name,
-                                     account_id=account_id)
+                                         src_database_name=src_database_name,
+                                         src_collection_name= src_collection_name,
+                                         model_name= model_name,
+                                         account_id=account_id)
     
     # case mlArtifacts does not exists, the model come from coldstart
     else:
@@ -178,10 +178,10 @@ def personalized_content_predict_main(event,
         
         # perform model loading function
         xg_reg = load_model_from_mongodb(mongo_client,
-                                 src_database_name=src_database_name,
-                                 src_collection_name= ml_arifact_country_collection,
-                                 model_name= model_name,
-                                 account_id=country_code)
+                                         src_database_name=src_database_name,
+                                         src_collection_name= ml_arifact_country_collection,
+                                         model_name= model_name,
+                                         account_id=country_code)
 
     # 3. preparation
     # prepare_features
