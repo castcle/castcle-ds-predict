@@ -7,28 +7,48 @@ from datetime import datetime, timedelta
 import pandas as pd
 import xgboost as xgb
 
+# define existence of mlAritact of user function
+def account_artifact_checker(src_database_name: str,
+                             src_collection_name: str, 
+                             account_id):
+    
+    # find for ml artifact of the account and return boolean of existence
+    existence = mongo_client[src_database_name][src_collection_name].find({'account': account_id})
+    
+    return existence
+
+# define function to get country code of the account
+def get_country_code(account_id,
+                     app_db: str,
+                     account_collection: str):
+    
+    temp = mongo_client[app_db][account_collection].find({'_id': account_id}, 
+                                                         {'_id': 0,
+                                                          'countryCode':'$geolocation.countryCode'})
+    country_code = temp[0]['countryCode']
+    
+    return country_code
 
 # define load model artifact to database function
 def load_model_from_mongodb(mongo_client,
                             src_database_name: str,
                             src_collection_name: str, 
                             model_name: str, 
-                            account_id, #! using user id, in future version change to account id
-                            ):
+                            account_id):
     
     json_data = {} # pre-define model as json format
     
     # find model as corresponding user id #! will change to account id in the future
     data = mongo_client[src_database_name][src_collection_name].find({
-        'account': account_id,
-        'model': model_name
+                                                                      'account': account_id,
+                                                                      'model': model_name
     })
 
     # loop throgh schema
     for i in data:
         
         json_data = i
-
+        
     # get model artifact
     pickled_model = json_data['artifact']
 
@@ -91,29 +111,8 @@ def prepare_features(mongo_client,
     
     return content_features
 
-# define save feed item function
-def save_feed_to_mongodb(mongo_client,
-                         account_id,
-                         content_id_list,
-                         prediction_score,
-                         dst_database_name: str,
-                         dst_collection_name: str):
 
-
-    document = mongo_client[dst_database_name][dst_collection_name].update_one(
-        {
-            'viewer': account_id
-        }, {
-            '$set': {
-                'viewer': account_id,
-                'contents': content_id_list,
-                'prediction_score': prediction_score,
-                'scoredAt': datetime.utcnow()
-            }
-        }, upsert= True)
-
-    return None
-
+# define function to formating output
 def convert_lists_to_dict(contents_id_list, 
                           prediction_scores):
     
@@ -125,16 +124,18 @@ def convert_lists_to_dict(contents_id_list,
     
     return result
 
+
 # define main function
 def personalized_content_predict_main(event,
                                       mongo_client,
                                       src_database_name: str,
                                       src_collection_name: str,
                                       analytics_db: str,
+                                      app_db: str,
+                                      account_collection: str,
+                                      ml_arifact_country_collection: str,
                                       creator_stats_collection: str,
                                       content_stats_collection: str,
-                                      dst_database_name: str,
-                                      dst_collection_name: str,
                                       model_name: str):
     
     # 1. get input
@@ -143,15 +144,45 @@ def personalized_content_predict_main(event,
     
     #! convert to object id
     content_id_list = [ObjectId(content) for content in event.get('contents', None)]
+
+    # check existence of personalize content artifact of the account 
+    existence = account_artifact_checker(src_database_name=src_database_name,
+                        src_collection_name=src_collection_name, 
+                        account_id=account_id)
     
     # 2. loading model
-    # perform model loading function
-    xg_reg = load_model_from_mongodb(mongo_client,
+    # case mlArtifacts exists
+    if len(list(existence)) != 0: #! in testing, use ""== 0" in deployment use "!= 0"
+        
+        #!
+        print('this comes from existence = true')
+        
+        # perform model loading function
+        xg_reg = load_model_from_mongodb(mongo_client,
                                      src_database_name=src_database_name,
                                      src_collection_name= src_collection_name,
                                      model_name= model_name,
-                                     account_id=account_id) # tend to change name
+                                     account_id=account_id)
     
+    # case mlArtifacts does not exists, the model come from coldstart
+    else:
+        
+        #!
+        print('this comes from existence = false')
+        
+        # get country code
+        country_code = get_country_code(account_id=account_id, app_db=app_db, account_collection=account_collection)
+
+        #!
+        print(country_code)    
+        
+        # perform model loading function
+        xg_reg = load_model_from_mongodb(mongo_client,
+                                 src_database_name=src_database_name,
+                                 src_collection_name= ml_arifact_country_collection,
+                                 model_name= model_name,
+                                 account_id=country_code)
+
     # 3. preparation
     # prepare_features
     content_features = prepare_features(mongo_client,
@@ -164,6 +195,7 @@ def personalized_content_predict_main(event,
     # define result format
     prediction_scores = [float(score) for score in (xg_reg.predict(content_features.drop('contentId', axis = 1)))]
     
+    
     # 5. construct result schemas
     result = convert_lists_to_dict(contents_id_list = event.get('contents', None), 
                                    prediction_scores = prediction_scores)
@@ -173,3 +205,4 @@ def personalized_content_predict_main(event,
     }
     
     return response
+    
