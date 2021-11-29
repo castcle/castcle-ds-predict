@@ -159,6 +159,7 @@ def personalized_content_predict_main(event,
     if len(list(existence)) != 0: #! in testing, use ""== 0" in deployment use "!= 0"
         
         #!
+        print('case: mlArtifact exists')
         print('this comes from existence = true')
         
         # perform model loading function
@@ -172,6 +173,7 @@ def personalized_content_predict_main(event,
     else:
         
         #!
+        print('case: mlArtifact not exists')
         print('this comes from existence = false')
         
         # get country code
