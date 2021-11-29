@@ -175,7 +175,7 @@ def personalized_content_predict_main(event,
         print('this comes from existence = false')
         
         # get country code
-        country_code = get_country_code(account_id=account_id, app_db=app_db, account_collection=account_collection)
+        country_code = get_country_code(mongo_client=mongo_client, account_id=account_id, app_db=app_db, account_collection=account_collection)
 
         #!
         print(country_code)    
