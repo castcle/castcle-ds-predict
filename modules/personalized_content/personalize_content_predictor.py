@@ -140,15 +140,18 @@ def personalized_content_predict_main(event,
     # 1. get input
     #! convert to object id
     account_id = ObjectId(event.get('accountId', None))
+    print("accountId:", account_id)
     
     #! convert to object id
     content_id_list = [ObjectId(content) for content in event.get('contents', None)]
+    print("content_list:", content_id_list)
 
     # check existence of personalize content artifact of the account 
     existence = account_artifact_checker(mongo_client,
                                          src_database_name=src_database_name,
                                          src_collection_name=src_collection_name, 
                                          account_id=account_id)
+    print("existence:", existence)
     
     # 2. loading model
     # case mlArtifacts exists
