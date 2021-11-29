@@ -140,15 +140,19 @@ def personalized_content_predict_main(event,
     # 1. get input
     #! convert to object id
     account_id = ObjectId(event.get('accountId', None))
+    print("accountId:", account_id)
     
     #! convert to object id
     content_id_list = [ObjectId(content) for content in event.get('contents', None)]
+    print("content_list:", content_id_list)
+    print("len content_list:",len(content_id_list))
 
     # check existence of personalize content artifact of the account 
     existence = account_artifact_checker(mongo_client,
                                          src_database_name=src_database_name,
                                          src_collection_name=src_collection_name, 
                                          account_id=account_id)
+    print("existence:", existence)
     
     # 2. loading model
     # case mlArtifacts exists
@@ -190,10 +194,14 @@ def personalized_content_predict_main(event,
                                         analytics_db = analytics_db,
                                         content_stats_collection = content_stats_collection,
                                         creator_stats_collection = creator_stats_collection)
+    print("content_features:", content_features)
+    print("len content_features:", len(content_features))
     
     # 4. prediction
     # define result format
     prediction_scores = [float(score) for score in (xg_reg.predict(content_features.drop('contentId', axis = 1)))]
+    print("prediction_scores:", prediction_scores)
+    print("len prediction_scores:", len(prediction_scores))
     
     
     # 5. construct result schemas
