@@ -138,6 +138,7 @@ def coldstart_score_main(client):
                                     model_name = 'xgboost')
     
     #! logging coldstart prediction result to cloudwatch staging (Lambda)
+    import pandas as pd
     mlArtifacts_country = client['app-db']['guestfeeditems']
     ml_set = pd.DataFrame(list(mlArtifacts_country.find().limit(10)))
     print(ml_set)
