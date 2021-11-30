@@ -212,6 +212,7 @@ def personalized_content_predict_main(event,
 
     print('final length of scores:')
     print(len(prediction_scores))
+    print(prediction_scores)
 
     response = {
         'statusCode': 200,
@@ -220,6 +221,10 @@ def personalized_content_predict_main(event,
 
     print('response:')
     print(len(response['result']))
+    print(response['result'])
+    print('result:')
+    print(len(result))
+    print(result)
     
     return response
     
