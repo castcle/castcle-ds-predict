@@ -137,7 +137,8 @@ def coldstart_score_main(client):
                                     saved_data_temp = 'guestfeeditemstemp',
                                     model_name = 'xgboost')
     
-    mlArtifacts_country = mongo_client['app-db']['guestfeeditems']
+    #! logging coldstart prediction result to cloudwatch staging (Lambda)
+    mlArtifacts_country = client['app-db']['guestfeeditems']
     ml_set = pd.DataFrame(list(mlArtifacts_country.find().limit(10)))
     print(ml_set)
     
