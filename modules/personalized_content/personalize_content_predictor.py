@@ -19,12 +19,32 @@ def account_artifact_checker(mongo_client,
 def get_country_code(mongo_client,
                      account_id,
                      app_db: str,
-                     account_collection: str):
+                     account_collection: str
+                     ):
     
-    temp = mongo_client[app_db][account_collection].find({'_id': account_id}, 
-                                                         {'_id': 0,
-                                                          'countryCode':'$geolocation.countryCode'})
-    country_code = temp[0]['countryCode']
+    # geolocation checker
+    # case: has geolocation
+    if len(list(mongo_client[app_db][account_collection].find({'_id': account_id, 
+                                                   'geolocation.countryCode': {'$exists': True}}
+                                                  ))) != 0:
+
+        print('user has geolocation')
+
+        # get country code
+        temp = mongo_client[app_db][account_collection].find({'_id': account_id}, 
+                                                             {'_id': 0,
+                                                              'countryCode':'$geolocation.countryCode'})
+        
+        # assign country code
+        country_code = temp[0]['countryCode']
+     
+    # case does not have geolocation
+    else:
+        
+        print('user does not have geolocation')
+        
+        # set country code to US
+        country_code = "US"
     
     return country_code
 
