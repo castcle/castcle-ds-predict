@@ -15,8 +15,7 @@ def cold_start_by_counytry_scroing( client,
     from pprint import pprint
     import numpy as np
 
-    # fixed by coupon
-    client = mongo_client
+
 
     appDb = client['app-db']
     analyticsDb = client['analytics-db']
@@ -132,7 +131,7 @@ def cold_start_by_counytry_scroing( client,
     print('done_move')
 def coldstart_score_main(client):
     
-    cold_start_by_counytry_scroing(client=mongo_client,
+    cold_start_by_counytry_scroing(client=client,
                                     saved_model = 'mlArtifacts_country',
                                     saved_data = 'guestfeeditems',
                                     saved_data_temp = 'guestfeeditemstemp',
