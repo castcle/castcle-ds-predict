@@ -15,6 +15,8 @@ def cold_start_by_counytry_scroing( client,
     from pprint import pprint
     import numpy as np
 
+    # fixed by coupon
+    client = mongo_client
 
     appDb = client['app-db']
     analyticsDb = client['analytics-db']
