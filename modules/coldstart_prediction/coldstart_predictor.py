@@ -16,13 +16,14 @@ def cold_start_by_counytry_scroing( client,
     import numpy as np
 
 
+
     appDb = client['app-db']
     analyticsDb = client['analytics-db']
  
-    def prepare_features(mongo_client, 
-                     analytics_db: str,
-                     content_stats_collection: str,
-                     creator_stats_collection: str):
+    def prepare_features(client,
+                         analytics_db: str,
+                         content_stats_collection: str,
+                         creator_stats_collection: str):
     
     # define cursor of content features
         contentFeaturesCursor = [
@@ -66,7 +67,7 @@ def cold_start_by_counytry_scroing( client,
     
         return content_features
 
-    contentFeatures = prepare_features(mongo_client = client, # default
+    contentFeatures = prepare_features(client = client, # default
                                         analytics_db = 'analytics-db',
                                         content_stats_collection = 'contentStats',
                                         creator_stats_collection = 'creatorStats')
@@ -128,14 +129,18 @@ def cold_start_by_counytry_scroing( client,
     
     saved_data_country_temp.rename(saved_data, dropTarget = True)
     print('done_move')
-def coldstart_score_main(mongo_client):
+def coldstart_score_main(client):
     
-    cold_start_by_counytry_scroing( mongo_client,
+    cold_start_by_counytry_scroing(client=client,
                                     saved_model = 'mlArtifacts_country',
                                     saved_data = 'guestfeeditems',
                                     saved_data_temp = 'guestfeeditemstemp',
                                     model_name = 'xgboost')
     
-
+    #! logging coldstart prediction result to cloudwatch staging (Lambda)
+    import pandas as pd
+    mlArtifacts_country = client['app-db']['guestfeeditems']
+    ml_set = pd.DataFrame(list(mlArtifacts_country.find().limit(10)))
+    print(ml_set)
     
     return
