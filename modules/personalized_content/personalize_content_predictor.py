@@ -207,10 +207,8 @@ def personalized_content_predict_main(event,
     
     
     # 5. construct result schemas
-    result = convert_lists_to_dict(contents_id_list = content_id_list), 
-                                   prediction_scores = prediction_scores)
-    # result = convert_lists_to_dict(contents_id_list = event.get('contents', None), 
-                                #    prediction_scores = prediction_scores)
+    result = convert_lists_to_dict(contents_id_list = content_id_list), ßprediction_scores = prediction_scores)
+    # result = convert_lists_to_dict(contents_id_list = event.get('contents', None), prediction_scores = prediction_scores)
 
     print('final length of scores:')
     print(len(prediction_scores))
