@@ -115,11 +115,11 @@ def prepare_features(mongo_client,
 def convert_lists_to_dict(contents_id_list, 
                           prediction_scores):
     
-    result = {}
+    result = []
     
     for index, _ in enumerate(prediction_scores):
-    
-        result[contents_id_list[index]] = prediction_scores[index]
+        
+        result.append({contents_id_list[index]: prediction_scores[index]})
     
     return result
 
@@ -144,7 +144,7 @@ def personalized_content_predict_main(event,
     
     #! convert to object id
     content_id_list = [ObjectId(content) for content in event.get('contents', None)]
-    print("content_list:", content_id_list)
+#     print("content_list:", content_id_list)
     print("len content_list:",len(content_id_list))
 
     # check existence of personalize content artifact of the account 
@@ -196,37 +196,25 @@ def personalized_content_predict_main(event,
                                         analytics_db = analytics_db,
                                         content_stats_collection = content_stats_collection,
                                         creator_stats_collection = creator_stats_collection)
-    print("content_features:", content_features)
-    print("len content_features:", len(content_features))
     
     # 4. prediction
     # define result format
     prediction_scores = [float(score) for score in (xg_reg.predict(content_features.drop('contentId', axis = 1)))]
-    print("prediction_scores:", prediction_scores)
-    print("len prediction_scores:", len(prediction_scores))
     
-    
+    print("len prediction_scores:",len(prediction_scores))
+
     # 5. construct result schemas
-    result = convert_lists_to_dict(contents_id_list = content_id_list, prediction_scores = prediction_scores)
+    result = convert_lists_to_dict(contents_id_list = event['contents'], prediction_scores = prediction_scores)
     # result = convert_lists_to_dict(contents_id_list = event.get('contents', None), prediction_scores = prediction_scores)
 
-    print('final length of scores:')
-    print(len(prediction_scores))
-    print(prediction_scores)
-    print('len content id list:')
-    print(len(content_id_list))
-
+    print("len result:",len(result))
+    print(len(result))
+    # print(result)
+    
     response = {
         'statusCode': 200,
         'result': result
     }
-
-    print('response:')
-    print(len(response['result']))
-    print(response['result'])
-    print('result:')
-    print(len(result))
-    print(result)
     
     return response
     
