@@ -67,7 +67,7 @@ def cold_start_by_counytry_scroing( client,
     
         return content_features
 
-    contentFeatures = prepare_features(mongo_client = client, # default
+    contentFeatures = prepare_features(client = client, # default
                                         analytics_db = 'analytics-db',
                                         content_stats_collection = 'contentStats',
                                         creator_stats_collection = 'creatorStats')
