@@ -138,6 +138,8 @@ def coldstart_score_main(mongo_client):
                                     saved_data_temp = 'guestfeeditemstemp',
                                     model_name = 'xgboost')
     
-
+    mlArtifacts_country = mongo_client['app-db']['guestfeeditems']
+    ml_set = pd.DataFrame(list(mlArtifacts_country.find()))
+    print(ml_set)
     
     return
