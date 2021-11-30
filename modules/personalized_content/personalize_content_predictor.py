@@ -209,10 +209,17 @@ def personalized_content_predict_main(event,
     # 5. construct result schemas
     result = convert_lists_to_dict(contents_id_list = event.get('contents', None), 
                                    prediction_scores = prediction_scores)
+
+    print('final length of scores:')
+    print(len(prediction_scores))
+
     response = {
         'statusCode': 200,
         'result': result
     }
+
+    print('response:')
+    print(len(response['result']))
     
     return response
     
