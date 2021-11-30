@@ -15,16 +15,15 @@ def cold_start_by_counytry_scroing( client,
     from pprint import pprint
     import numpy as np
 
-    # fixed by coupon
-    client = mongo_client
+
 
     appDb = client['app-db']
     analyticsDb = client['analytics-db']
  
-    def prepare_features(mongo_client, 
-                     analytics_db: str,
-                     content_stats_collection: str,
-                     creator_stats_collection: str):
+    def prepare_features(client,
+                         analytics_db: str,
+                         content_stats_collection: str,
+                         creator_stats_collection: str):
     
     # define cursor of content features
         contentFeaturesCursor = [
@@ -130,16 +129,16 @@ def cold_start_by_counytry_scroing( client,
     
     saved_data_country_temp.rename(saved_data, dropTarget = True)
     print('done_move')
-def coldstart_score_main(mongo_client):
+def coldstart_score_main(client):
     
-    cold_start_by_counytry_scroing( mongo_client,
+    cold_start_by_counytry_scroing(client=client,
                                     saved_model = 'mlArtifacts_country',
                                     saved_data = 'guestfeeditems',
                                     saved_data_temp = 'guestfeeditemstemp',
                                     model_name = 'xgboost')
     
     mlArtifacts_country = mongo_client['app-db']['guestfeeditems']
-    ml_set = pd.DataFrame(list(mlArtifacts_country.find()))
+    ml_set = pd.DataFrame(list(mlArtifacts_country.find().limit(10)))
     print(ml_set)
     
     return
