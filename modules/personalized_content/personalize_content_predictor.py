@@ -41,10 +41,11 @@ def get_country_code(mongo_client,
     # case does not have geolocation
     else:
         
+        
         print('user does not have geolocation')
         
         # set country code to US
-        country_code = "US"
+        country_code = "us"
     
     return country_code
 
