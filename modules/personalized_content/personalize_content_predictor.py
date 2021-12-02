@@ -21,6 +21,7 @@ def get_country_code(mongo_client,
                      app_db: str,
                      account_collection: str
                      ):
+
     
     # geolocation checker
     # case: has geolocation
@@ -46,7 +47,7 @@ def get_country_code(mongo_client,
         
         # set country code to US
         country_code = "us"
-    
+
     
     return country_code
 
