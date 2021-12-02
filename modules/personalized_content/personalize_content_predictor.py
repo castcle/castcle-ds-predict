@@ -47,6 +47,7 @@ def get_country_code(mongo_client,
         # set country code to US
         country_code = "us"
     
+    
     return country_code
 
 # define load model artifact to database function
