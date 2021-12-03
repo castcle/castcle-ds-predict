@@ -237,3 +237,4 @@ def personalized_content_predict_main(event,
     }
     
     return response
+    
