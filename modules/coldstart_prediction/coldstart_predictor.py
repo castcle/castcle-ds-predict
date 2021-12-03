@@ -5,25 +5,19 @@ def cold_start_by_counytry_scroing( client,
                                     model_name = 'xgboost'):
     
 
-    import sklearn
     import pandas as pd
-    import json
-    import xgboost as xgb
-    import bson.objectid
     import pickle
     from datetime import datetime
     from pprint import pprint
-    import numpy as np
-
 
 
     appDb = client['app-db']
     analyticsDb = client['analytics-db']
  
-    def prepare_features(client,
-                         analytics_db: str,
-                         content_stats_collection: str,
-                         creator_stats_collection: str):
+    def prepare_features(client, 
+                     analytics_db: str,
+                     content_stats_collection: str,
+                     creator_stats_collection: str):
     
     # define cursor of content features
         contentFeaturesCursor = [
@@ -118,7 +112,7 @@ def cold_start_by_counytry_scroing( client,
         result = result.append(c)  
 
         
-     # update collection
+    # update collection
     result.reset_index(inplace=False)
     
     data_dict = result.to_dict("records")
@@ -131,13 +125,13 @@ def cold_start_by_counytry_scroing( client,
     print('done_move')
 def coldstart_score_main(client):
     
-    cold_start_by_counytry_scroing(client=client,
+    cold_start_by_counytry_scroing( client,
                                     saved_model = 'mlArtifacts_country',
                                     saved_data = 'guestfeeditems',
                                     saved_data_temp = 'guestfeeditemstemp',
                                     model_name = 'xgboost')
     
-    #! logging coldstart prediction result to cloudwatch staging (Lambda)
+	#! logging coldstart prediction result to cloudwatch staging (Lambda)
     import pandas as pd
     mlArtifacts_country = client['app-db']['guestfeeditems']
     ml_set = pd.DataFrame(list(mlArtifacts_country.find().limit(10)))
