@@ -135,14 +135,14 @@ def prepare_features(mongo_client,
 
 
 # define function to formating output
-def convert_lists_to_dict(content_id_list, 
+def convert_lists_to_dict(string_content_id_list, 
                           prediction_scores):
     
     result = {}
     
     for index, _ in enumerate(prediction_scores):
         
-        result[content_id_list[index]] = prediction_scores[index]
+        result[string_content_id_list[index]] = prediction_scores[index]
     
     return result
 
@@ -168,6 +168,9 @@ def personalized_content_predict_main(event,
     
     # convert to object id & distinct
     content_id_list = [ObjectId(content) for content in list(set(event.get('contents', None)))]
+    
+    # define string of content id for response
+    string_content_id_list = list(set(event.get('contents', None)))
     
     print('len content id list', len(content_id_list))
 
@@ -227,7 +230,7 @@ def personalized_content_predict_main(event,
     print("len prediction_scores:",len(prediction_scores))
 
     # 5. construct result schemas
-    result = convert_lists_to_dict(content_id_list = content_id_list, prediction_scores = prediction_scores)
+    result = convert_lists_to_dict(string_content_id_list = string_content_id_list, prediction_scores = prediction_scores)
 
     print("len result:",len(result))
     
@@ -237,4 +240,3 @@ def personalized_content_predict_main(event,
     }
     
     return response
-    
