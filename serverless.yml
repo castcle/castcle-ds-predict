@@ -35,41 +35,44 @@ custom:
     test: ${ssm:test-ds-mongodb-password}
     staging: ${ssm:staging-ds-mongodb-password}
     prod: ${ssm:prod-ds-mongodb-password}
-  securityGroup:
-    dev: sg-0a85d287510c750fb
-    test: sg-0821f0b9421d5c942
-    staging: sg-0a676a88fdcd07038
-    prod: sg-02f9c88c7e05b1f05
-  subnetAzA:
-    dev: subnet-06dd909aac8fd1948
-    test: subnet-090044e7a4daccd43
-    staging: subnet-07a1a18b1527f00c7
-    prod: subnet-0290592d406bccc27
-  subnetAzB:
-    dev: subnet-08688e4403d21037e
-    test: subnet-06ed558d84fc9724e
-    staging: subnet-0587b148568217c70
-    prod: subnet-0790d32929fd45c33
-  subnetAzC:
-    dev: subnet-074ee31c582c2cbfa
-    test: subnet-006fd91684c0bbda3
-    staging: subnet-0685f5c67f247769a
-    prod: subnet-03aeae9f13764217c
-  subnetAzD:
-    dev: subnet-0734c25674eded0ac
-    test: subnet-08add80ac0c4b4030
-    staging: subnet-01ebaa837f7ed8258
-    prod: subnet-0e59ee98c9d5c760e
-  subnetAzE:
-    dev: subnet-086b2062d3bfb6fa1
-    test: subnet-00d39205611d1668b
-    staging: subnet-0401577626c6d60e7
-    prod: subnet-03000365f0e4a2cf2
-  subnetAzF:
-    dev: subnet-0a3704862892675cb
-    test: subnet-0dd1873570608c890
-    staging: subnet-081ef1e25f7f56a09
-    prod: subnet-01ce362ad1c488b27
+  securityGroupIds:
+    dev:
+      - sg-0a85d287510c750fb
+    test:
+      - sg-0821f0b9421d5c942
+    staging:
+      - sg-0a676a88fdcd07038
+    prod:
+      - sg-02f9c88c7e05b1f05
+  subnetIds:
+    dev:
+      - subnet-06dd909aac8fd1948
+      # - subnet-08688e4403d21037e
+      # - subnet-074ee31c582c2cbfa
+      # - subnet-0734c25674eded0ac
+      # - subnet-086b2062d3bfb6fa1
+      # - subnet-0a3704862892675cb
+    test:
+      - subnet-090044e7a4daccd43
+      # - subnet-06ed558d84fc9724e
+      # - subnet-006fd91684c0bbda3
+      # - subnet-08add80ac0c4b4030
+      # - subnet-00d39205611d1668b
+      # - subnet-0dd1873570608c890
+    staging:
+      - subnet-07a1a18b1527f00c7
+      # - subnet-0587b148568217c70
+      # - subnet-0685f5c67f247769a
+      # - subnet-01ebaa837f7ed8258
+      # - subnet-0401577626c6d60e7
+      # - subnet-081ef1e25f7f56a09
+    prod:
+      - subnet-0290592d406bccc27
+      # - subnet-0790d32929fd45c33
+      # - subnet-03aeae9f13764217c
+      # - subnet-0e59ee98c9d5c760e
+      # - subnet-03000365f0e4a2cf2
+      # - subnet-01ce362ad1c488b27
 
 provider:
   name: aws
@@ -85,15 +88,8 @@ provider:
   iam:
     role: ${opt:role, 'arn:aws:iam::044086777883:role/dataAnalyticsLambdaRole'}
   vpc:
-    securityGroupIds:
-      - ${self:custom.securityGroup.${self:provider.stage}}
-    subnetIds:
-      - ${self:custom.subnetAzA.${self:provider.stage}}
-      - ${self:custom.subnetAzB.${self:provider.stage}}
-      - ${self:custom.subnetAzC.${self:provider.stage}}
-      - ${self:custom.subnetAzD.${self:provider.stage}}
-      - ${self:custom.subnetAzE.${self:provider.stage}}
-      - ${self:custom.subnetAzF.${self:provider.stage}}
+    securityGroupIds: ${self:custom.securityGroupIds.${self:provider.stage}}
+    subnetIds: ${self:custom.subnetIds.${self:provider.stage}}
   ecr:
     images:
       app_image:
