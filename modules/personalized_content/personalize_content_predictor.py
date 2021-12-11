@@ -19,12 +19,35 @@ def account_artifact_checker(mongo_client,
 def get_country_code(mongo_client,
                      account_id,
                      app_db: str,
-                     account_collection: str):
+                     account_collection: str
+                     ):
+
     
-    temp = mongo_client[app_db][account_collection].find({'_id': account_id}, 
-                                                         {'_id': 0,
-                                                          'countryCode':'$geolocation.countryCode'})
-    country_code = temp[0]['countryCode']
+    # geolocation checker
+    # case: has geolocation
+    if len(list(mongo_client[app_db][account_collection].find({'_id': account_id, 
+                                                   'geolocation.countryCode': {'$exists': True}}
+                                                  ))) != 0:
+
+        print('user has geolocation')
+
+        # get country code
+        temp = mongo_client[app_db][account_collection].find({'_id': account_id}, 
+                                                             {'_id': 0,
+                                                              'countryCode':'$geolocation.countryCode'})
+        
+        # assign country code
+        country_code = temp[0]['countryCode']
+     
+    # case does not have geolocation
+    else:
+        
+        
+        print('user does not have geolocation')
+        
+        # set country code to US
+        country_code = "us"
+
     
     return country_code
 
@@ -37,7 +60,7 @@ def load_model_from_mongodb(mongo_client,
     
     json_data = {} # pre-define model as json format
     
-    # find model as corresponding user id #! will change to account id in the future
+    # find model as corresponding account id
     data = mongo_client[src_database_name][src_collection_name].find({
                                                                       'account': account_id,
                                                                       'model': model_name
@@ -86,7 +109,7 @@ def prepare_features(mongo_client,
         }, {
             # map output format
             '$project': {
-                '_id': 1,
+                '_id': 0, # change to 0 from 1
                 'contentId': 1,
                 'likeCount': 1,
                 'commentCount': 1,
@@ -112,14 +135,14 @@ def prepare_features(mongo_client,
 
 
 # define function to formating output
-def convert_lists_to_dict(contents_id_list, 
+def convert_lists_to_dict(string_content_id_list, 
                           prediction_scores):
     
     result = {}
     
     for index, _ in enumerate(prediction_scores):
-    
-        result[contents_id_list[index]] = prediction_scores[index]
+        
+        result[string_content_id_list[index]] = prediction_scores[index]
     
     return result
 
@@ -138,11 +161,18 @@ def personalized_content_predict_main(event,
                                       model_name: str):
     
     # 1. get input
-    #! convert to object id
+    # convert to object id
     account_id = ObjectId(event.get('accountId', None))
     
-    #! convert to object id
-    content_id_list = [ObjectId(content) for content in event.get('contents', None)]
+    print("accountId:", account_id)
+    
+    # convert to object id & distinct
+    content_id_list = [ObjectId(content) for content in list(set(event.get('contents', None)))]
+    
+    # define string of content id for response
+    string_content_id_list = list(set(event.get('contents', None)))
+    
+    print('len content id list', len(content_id_list))
 
     # check existence of personalize content artifact of the account 
     existence = account_artifact_checker(mongo_client,
@@ -155,7 +185,7 @@ def personalized_content_predict_main(event,
     if len(list(existence)) != 0: #! in testing, use ""== 0" in deployment use "!= 0"
         
         #!
-        print('this comes from existence = true')
+        print('case: mlArtifact exists')
         
         # perform model loading function
         xg_reg = load_model_from_mongodb(mongo_client,
@@ -168,13 +198,13 @@ def personalized_content_predict_main(event,
     else:
         
         #!
-        print('this comes from existence = false')
+        print('case: mlArtifact not exists')
         
         # get country code
-        country_code = get_country_code(account_id=account_id, app_db=app_db, account_collection=account_collection)
+        country_code = get_country_code(mongo_client=mongo_client, account_id=account_id, app_db=app_db, account_collection=account_collection)
 
         #!
-        print(country_code)    
+        print('country code:', country_code)    
         
         # perform model loading function
         xg_reg = load_model_from_mongodb(mongo_client,
@@ -191,18 +221,22 @@ def personalized_content_predict_main(event,
                                         content_stats_collection = content_stats_collection,
                                         creator_stats_collection = creator_stats_collection)
     
+    print('len of content feature', len(content_features))
+    
     # 4. prediction
     # define result format
     prediction_scores = [float(score) for score in (xg_reg.predict(content_features.drop('contentId', axis = 1)))]
     
-    
+    print("len prediction_scores:",len(prediction_scores))
+
     # 5. construct result schemas
-    result = convert_lists_to_dict(contents_id_list = event.get('contents', None), 
-                                   prediction_scores = prediction_scores)
+    result = convert_lists_to_dict(string_content_id_list = string_content_id_list, prediction_scores = prediction_scores)
+
+    print("len result:",len(result))
+    
     response = {
         'statusCode': 200,
         'result': result
     }
     
     return response
-    
