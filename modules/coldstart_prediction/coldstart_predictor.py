@@ -74,7 +74,7 @@ def cold_start_by_counytry_scroing( client,
     saved_data_country_temp = appDb[saved_data_temp]
     
 
-    saved_data_country_temp.remove({})
+    saved_data_country_temp.drop({})
     
     def load_model_from_mongodb(collection, model_name, account):
         json_data = {}
@@ -112,7 +112,7 @@ def cold_start_by_counytry_scroing( client,
         result = result.append(c)  
 
         
-    # update collection
+     # update collection
     result.reset_index(inplace=False)
     
     data_dict = result.to_dict("records")
@@ -131,10 +131,6 @@ def coldstart_score_main(client):
                                     saved_data_temp = 'guestfeeditemstemp',
                                     model_name = 'xgboost')
     
-	#! logging coldstart prediction result to cloudwatch staging (Lambda)
-    import pandas as pd
-    mlArtifacts_country = client['app-db']['guestfeeditems']
-    ml_set = pd.DataFrame(list(mlArtifacts_country.find().limit(10)))
-    print(ml_set)
+
     
     return
