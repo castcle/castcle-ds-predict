@@ -19,9 +19,9 @@ def cold_start_by_counytry_scroing( client,
                      content_stats_collection: str,
                      creator_stats_collection: str):
 
-    '''
-    feature preparation from "contentStats" & "creatorStats" for ultilize as feature in model prediction
-    '''
+        '''
+        feature preparation from "contentStats" & "creatorStats" for ultilize as feature in model prediction
+        '''
     
     # define cursor of content features
         contentFeaturesCursor = [
