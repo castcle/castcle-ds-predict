@@ -13,11 +13,13 @@ def handle(event, context):
     
     from modules.coldstart_prediction.coldstart_predictor \
         import coldstart_score_main
-        
+
+    # call modules main function    
     coldstart_score_main(client=mongo_client)
     
     print('prediction of coldstart: ',' completed')
 
+    # return output as status code and timestamp
     return {
         "statusCode": 200,
         "predicted_at": str(datetime.datetime.now())
