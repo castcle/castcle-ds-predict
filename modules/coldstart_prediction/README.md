@@ -99,7 +99,7 @@ def load_model_from_mongodb(collection, model_name, account):
 	return pickle.loads(pickled_model)
 ```
 ## Making coldstart prediction
-After model retrieved, make predictions
+After model retrieved, make predictions. Then, save the result to mongodb
 ```python
 result = pd.DataFrame()
 for countryId in list(ml_set.account.unique()):
