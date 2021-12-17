@@ -1,7 +1,8 @@
 # Coldstart predictor
 content recommendation (prediction part) for anonymous or non-active user by country
 ## scenario
-### image
+![coldstart-predictor](https://user-images.githubusercontent.com/91544452/146479705-e8a43619-41c7-458e-9639-32d17eb49377.JPG)
+
 run this predictor every 30 minute (subject to change) then save result to mongodb
 1. prepare aggregated features from "contentStats" & "creatorStats"
 2. retrieve model artifact by country 
