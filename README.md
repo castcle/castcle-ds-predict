@@ -125,3 +125,40 @@ This model will be used to rank within threshold contents based on countries' en
      - createdAt
      
 ![Cold-start](https://user-images.githubusercontent.com/90676485/146301272-4d2cbb07-5810-48b1-ac91-0fddeb04905c.jpg)
+
+
+## 5. Model Explanation: Personalized Content Model
+This model will be used to rank requested contents based on user’s engagement behaviors. The model will be re-trained everyday in the morning and stored in the mlArtifact collection in db_analytics. The model is for users that have their own personalized model meaning that they have at least one engagement history and can be used to give a wider range of content recommendation combined with cold start model.
+
+1. Model inputs
+- User engagement 
+- Content features 
+
+2. Model detail 
+- Model Used : XGBOOST Regression Model
+- Target variable : Weight engagement 
+- Time Using : 1 mins (12/13/2021)
+
+3. Output
+- Collection contains userId, artifacts, time-stamp 
+
+4. Model workflow (Scoring Section)
+  4.1.Prep content features ( analytics db contentStats, creatorStats )
+    1. Content Feature List
+    - likeCount : Total like of each content based on subject
+    - commentCount : Total comment of each content based on subject 	
+    - recastCount : Total recast of each content based on subject 	
+    - quoteCount : Total quote of each content based on subject 
+    - photoCount : Total photo of each content	
+    - characterLength : Number of charecter	
+    - creatorContentCount : Total content of the creator of this content
+    - creatorLikedCount : Total like of the creator of this content 
+    - creatorCommentedCount : Total comment of the creator of this content 
+    - creatorRecastedCount : Total recast of the creator of this content 
+    - creatorQuotedCount : Total quote of the creator of this content
+    - ageScore : age score of this content
+    2. Aggregation : Sum, Count
+  4.2.Load ML artifacts based on userId
+  4.3.Scoring given contents based on user’s model: Send content score to the Castcle app. 
+
+![Personalized-content](https://user-images.githubusercontent.com/90676485/146510163-3fa087b9-85cd-40f6-832b-c347e25d6f97.jpg)
