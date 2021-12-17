@@ -66,14 +66,19 @@ This model will be used to ranking/scoring within threshold contents based on en
   4. Model workflow
   This file explain only model prediction section a.k.a. scoring section. If you would like to see another section, [click here](https://github.com/castcle/castcle-trigger/edit/develop-readme/README.md)
    4.1. Content features preparation
+     
      1. Engagement List
      - Like
      - Comment 
      - Quote
      - Recast
+     
      2. Aggregation : Sum
+     
      3. Group By: "countryCode" (ISO3166), "contentId"   
+  
   4.2. Load model artifacts based on country 
+  
   4.3 Save top 2000 contents
     Output list 
     - "content"
@@ -103,7 +108,9 @@ This model will be used to ranking/scoring the requested contents based on userâ
  - Collection contains "userId", model artifacts, and timestamp 
 
  4. Model workflow (Scoring Section)
+  
   4.1 Content features preparation
+    
     1. Content Feature List
     - likeCount : Total like of each content based on subject
     - commentCount : Total comment of each content based on subject 	
@@ -118,7 +125,9 @@ This model will be used to ranking/scoring the requested contents based on userâ
     - creatorQuotedCount : Total quote of the creator of this content
     - ageScore : age score of this content
     2. Aggregation : Sum, Count
+  
   4.2.Load ML artifacts based on userId
+  
   4.3.Scoring given contents based on userâ€™s model: Send content score to the Castcle app. 
 
 ![Personalized-content](https://user-images.githubusercontent.com/90676485/146510163-3fa087b9-85cd-40f6-832b-c347e25d6f97.jpg)
