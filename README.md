@@ -80,7 +80,8 @@ This model will be used to ranking/scoring within threshold contents based on en
   4.2. Load model artifacts based on country 
   
   4.3 Save top 2000 contents
-    Output list 
+    Output list
+    
     - "content"
     - "score"
     - "countryCode"
