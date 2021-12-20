@@ -1,3 +1,8 @@
+'''
+personalize content model predictor
+function
+    predict content's score using trained personal model and return out as message. This execute when event request is sent.
+'''
 import json
 from mongo_client import ping_mongodb, mongo_client
 
@@ -7,10 +12,11 @@ def handle(event, context):
         print("WarmUp - Lambda is warm!")
         return
 
-    # print(json.dumps(event['body'], indent=4))
-
     from modules.personalized_content.personalize_content_predictor import personalized_content_predict_main
 
+    print('prediction of content id: ', event.get('accountId', None),' start')
+
+    # call modules main function
     response = personalized_content_predict_main(event,
                                       mongo_client,
                                       src_database_name = 'analytics-db',
@@ -23,8 +29,9 @@ def handle(event, context):
                                       content_stats_collection = 'contentStats',
                                       model_name = 'xgboost')
 
-    print('prediction of content id: ', event.get('accountId', None),' completed')
+    print('prediction of content id: ', event.get('accountId', None),' end')
 
+    # return response from modules main function
     return response
 
     

@@ -18,6 +18,10 @@ def cold_start_by_counytry_scroing( client,
                      analytics_db: str,
                      content_stats_collection: str,
                      creator_stats_collection: str):
+
+        '''
+        feature preparation from "contentStats" & "creatorStats" for ultilize as feature in model prediction
+        '''
     
     # define cursor of content features
         contentFeaturesCursor = [
@@ -77,6 +81,11 @@ def cold_start_by_counytry_scroing( client,
     saved_data_country_temp.drop({})
     
     def load_model_from_mongodb(collection, model_name, account):
+
+        '''
+        retrieve model artifact of the user in case of present or country model artifact in case of model artifact absent
+        '''    
+
         json_data = {}
         data = collection.find({
             'account': account,
@@ -112,7 +121,7 @@ def cold_start_by_counytry_scroing( client,
         result = result.append(c)  
 
         
-     # update collection
+    # update collection
     result.reset_index(inplace=False)
     
     data_dict = result.to_dict("records")
