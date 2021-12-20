@@ -1,40 +1,91 @@
 def cold_start_by_counytry_scroing( client,
-                                    saved_model = 'mlArtifacts_country_test',
-                                    saved_data = 'saved_prediction_country',
-                                    saved_data_all = 'saved_prediction_country_accum',
-                                    content_features = 'contentFeatures',
+                                    saved_model = 'mlArtifacts_country',
+                                    saved_data = 'guestfeeditems',
+                                    saved_data_temp = 'guestfeeditemstemps',
                                     model_name = 'xgboost'):
     
-    import pymongo # connect to MongoDB
-    from pymongo import MongoClient # client connection to MongoDB
-    import sklearn
+
     import pandas as pd
-    import json
-    import xgboost as xgb
-    import bson.objectid
     import pickle
     from datetime import datetime
     from pprint import pprint
-    import numpy as np
+
 
     appDb = client['app-db']
     analyticsDb = client['analytics-db']
  
-    contentFeatures = analyticsDb[content_features]
-    contentFeatures = pd.DataFrame(list(contentFeatures.find()))
+    def prepare_features(client, 
+                     analytics_db: str,
+                     content_stats_collection: str,
+                     creator_stats_collection: str):
+
+        '''
+        feature preparation from "contentStats" & "creatorStats" for ultilize as feature in model prediction
+        '''
+    
+    # define cursor of content features
+        contentFeaturesCursor = [
+         {
+            # join with creator stats
+                '$lookup': {
+                    'from': creator_stats_collection, # previous:'creatorStats',
+                    'localField': 'authorId',
+                    'foreignField': '_id',
+                    'as': 'creatorStats'
+                }
+            }, {
+            # deconstruct array
+                '$unwind': {
+                    'path': '$creatorStats',
+                    'preserveNullAndEmptyArrays': True
+                }
+            }, {
+            # map output format
+                '$project': {
+                    '_id': 1,
+                    'likeCount': 1,
+                    'commentCount': 1,
+                    'recastCount': 1,
+                    'quoteCount': 1,
+                    'photoCount': 1,
+                    'characterLength': 1,
+                    'creatorContentCount' :'$creatorStats.contentCount',
+                    'creatorLikedCount': '$creatorStats.creatorLikedCount',
+                    'creatorCommentedCount': '$creatorStats.creatorCommentedCount',
+                    'creatorRecastedCount': '$creatorStats.creatorRecastedCount',
+                    'creatorQuotedCount': '$creatorStats.creatorQuotedCount',
+                    'ageScore': '$aggregator.ageScore'
+
+                }
+            }
+        ]
+
+
+        content_features = pd.DataFrame(list(client[analytics_db][content_stats_collection].aggregate(contentFeaturesCursor))).rename({'_id':'contentId'},axis = 1)
+    
+        return content_features
+
+    contentFeatures = prepare_features(client = client, # default
+                                        analytics_db = 'analytics-db',
+                                        content_stats_collection = 'contentStats',
+                                        creator_stats_collection = 'creatorStats')
 
     mlArtifacts_country = analyticsDb[saved_model]
     ml_set = pd.DataFrame(list(mlArtifacts_country.find()))
     
-    saved_data_country = analyticsDb[saved_data]
+    saved_data_country = appDb[saved_data]
     
-    saved_data_country_accum = analyticsDb[saved_data_all]
+    saved_data_country_temp = appDb[saved_data_temp]
     
-    # truncate collections before write
-    saved_data_country.remove({})
-    saved_data_country_accum.remove({})
+
+    saved_data_country_temp.drop({})
     
     def load_model_from_mongodb(collection, model_name, account):
+
+        '''
+        retrieve model artifact of the user in case of present or country model artifact in case of model artifact absent
+        '''    
+
         json_data = {}
         data = collection.find({
             'account': account,
@@ -55,36 +106,40 @@ def cold_start_by_counytry_scroing( client,
                                      account= countryId,
                                      model_name= model_name)
 
-        content_test = contentFeatures.drop(['userId'], axis = 1)
+        content_test = contentFeatures
     
-        a = pd.DataFrame(xg_reg_load.predict(content_test.drop(['_id'], axis = 1)), columns = ['predict'])
-        b = contentFeatures[['_id']].reset_index(drop = True)
-        c = pd.concat([b,a],axis =1).rename({'_id':'contentId'},axis = 1)
-        c['country_code'] = countryId
-        c['Score_At'] = datetime.now() 
-        c = c.sort_values(by='predict', ascending=False)
+        a = pd.DataFrame(xg_reg_load.predict(content_test.drop(['contentId'], axis = 1)), columns = ['score'])
+        b = contentFeatures[['contentId']].reset_index(drop = True)
+        c = pd.concat([b,a],axis =1)
+        c['countryCode'] = countryId
+        c['type'] = "content"
+        c['updatedAt'] = datetime.utcnow() 
+        c['createdAt'] = datetime.utcnow() 
+        c = c.rename({"contentId":"content"},axis = 1)
+        c = c.sort_values(by='score', ascending=False)
         c = c.iloc[:2000,]
         result = result.append(c)  
 
         
-     # update collection
+    # update collection
     result.reset_index(inplace=False)
+    
     data_dict = result.to_dict("records")
     
-    saved_data_country.insert_many(data_dict)
-    
-    saved_data_country_accum.insert_many(data_dict)
-    
-#saved_data_country.update_one({'countryId': countryId},{'$set':{"scoring_list":data_dict}},upsert= True)
+    saved_data_country_temp.insert_many(data_dict)
+    print('done_save')
 
-    return
     
+    saved_data_country_temp.rename(saved_data, dropTarget = True)
+    print('done_move')
 def coldstart_score_main(client):
-    cold_start_by_counytry_scroing( client, 
-                                    saved_model = 'mlArtifacts_country_test',
-                                    saved_data = 'saved_prediction_country',
-                                    saved_data_all = 'saved_prediction_country_accum',
-                                    content_features = 'contentFeatures',
+    
+    cold_start_by_counytry_scroing( client,
+                                    saved_model = 'mlArtifacts_country',
+                                    saved_data = 'guestfeeditems',
+                                    saved_data_temp = 'guestfeeditemstemp',
                                     model_name = 'xgboost')
+    
+
     
     return
