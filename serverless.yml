@@ -47,32 +47,14 @@ custom:
   subnetIds:
     dev:
       - subnet-06dd909aac8fd1948
-      # - subnet-08688e4403d21037e
-      # - subnet-074ee31c582c2cbfa
-      # - subnet-0734c25674eded0ac
-      # - subnet-086b2062d3bfb6fa1
-      # - subnet-0a3704862892675cb
     test:
       - subnet-090044e7a4daccd43
-      # - subnet-06ed558d84fc9724e
-      # - subnet-006fd91684c0bbda3
-      # - subnet-08add80ac0c4b4030
-      # - subnet-00d39205611d1668b
-      # - subnet-0dd1873570608c890
     staging:
       - subnet-07a1a18b1527f00c7
-      # - subnet-0587b148568217c70
-      # - subnet-0685f5c67f247769a
-      # - subnet-01ebaa837f7ed8258
-      # - subnet-0401577626c6d60e7
-      # - subnet-081ef1e25f7f56a09
+      - subnet-0587b148568217c70
     prod:
       - subnet-0290592d406bccc27
-      # - subnet-0790d32929fd45c33
-      # - subnet-03aeae9f13764217c
-      # - subnet-0e59ee98c9d5c760e
-      # - subnet-03000365f0e4a2cf2
-      # - subnet-01ce362ad1c488b27
+      - subnet-0790d32929fd45c33
 
 provider:
   name: aws
