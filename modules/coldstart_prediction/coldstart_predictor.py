@@ -18,6 +18,10 @@ def cold_start_by_counytry_scroing( client,
                      analytics_db: str,
                      content_stats_collection: str,
                      creator_stats_collection: str):
+
+        '''
+        feature preparation from "contentStats" & "creatorStats" for ultilize as feature in model prediction
+        '''
     
     # define cursor of content features
         contentFeaturesCursor = [
@@ -74,9 +78,14 @@ def cold_start_by_counytry_scroing( client,
     saved_data_country_temp = appDb[saved_data_temp]
     
 
-    saved_data_country_temp.remove({})
+    saved_data_country_temp.drop({})
     
     def load_model_from_mongodb(collection, model_name, account):
+
+        '''
+        retrieve model artifact of the user in case of present or country model artifact in case of model artifact absent
+        '''    
+
         json_data = {}
         data = collection.find({
             'account': account,
@@ -131,10 +140,6 @@ def coldstart_score_main(client):
                                     saved_data_temp = 'guestfeeditemstemp',
                                     model_name = 'xgboost')
     
-	#! logging coldstart prediction result to cloudwatch staging (Lambda)
-    import pandas as pd
-    mlArtifacts_country = client['app-db']['guestfeeditems']
-    ml_set = pd.DataFrame(list(mlArtifacts_country.find().limit(10)))
-    print(ml_set)
+
     
     return

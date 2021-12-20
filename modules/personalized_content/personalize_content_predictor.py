@@ -1,3 +1,11 @@
+'''
+main function of personalize content model prediction
+1. get input
+2. loading model
+3. feature preparation
+4. model prediction
+5. construct result schemas
+'''
 import pickle
 from bson import ObjectId
 from datetime import datetime, timedelta
@@ -10,6 +18,10 @@ def account_artifact_checker(mongo_client,
                              src_collection_name: str, 
                              account_id):
     
+    '''
+    check existence of the user's model artifact
+    '''
+
     # find for ml artifact of the account and return boolean of existence
     existence = mongo_client[src_database_name][src_collection_name].find({'account': account_id})
     
@@ -22,6 +34,9 @@ def get_country_code(mongo_client,
                      account_collection: str
                      ):
 
+    '''
+    find country code from geolocation of the user if absent, default country code "us" will be apply. This function will execute when there is not model artifact
+    '''
     
     # geolocation checker
     # case: has geolocation
@@ -57,6 +72,10 @@ def load_model_from_mongodb(mongo_client,
                             src_collection_name: str, 
                             model_name: str, 
                             account_id):
+
+    '''
+    retrieve model artifact of the user in case of present or country model artifact in case of model artifact absent
+    '''    
     
     json_data = {} # pre-define model as json format
     
@@ -82,6 +101,10 @@ def prepare_features(mongo_client,
                      analytics_db: str,
                      content_stats_collection: str,
                      creator_stats_collection: str):
+
+    '''
+    feature preparation from "contentStats" & "creatorStats" for ultilize as feature in model prediction
+    '''
     
     # define cursor of content features
     contentFeaturesCursor = [
@@ -137,7 +160,11 @@ def prepare_features(mongo_client,
 # define function to formating output
 def convert_lists_to_dict(string_content_id_list, 
                           prediction_scores):
-    
+
+    '''
+    convert output (content IDs & prediction scores) into dictionary/json facilitating return response
+    '''
+
     result = {}
     
     for index, _ in enumerate(prediction_scores):
@@ -160,6 +187,15 @@ def personalized_content_predict_main(event,
                                       content_stats_collection: str,
                                       model_name: str):
     
+    '''
+    main function of personalize content model prediction
+    1. get input
+    2. loading model
+    3. feature preparation
+    4. model prediction
+    5. construct result schemas
+    '''
+
     # 1. get input
     # convert to object id
     account_id = ObjectId(event.get('accountId', None))
@@ -213,7 +249,7 @@ def personalized_content_predict_main(event,
                                          model_name= model_name,
                                          account_id=country_code)
 
-    # 3. preparation
+    # 3. feature preparation
     # prepare_features
     content_features = prepare_features(mongo_client,
                                         content_id_list,
@@ -223,7 +259,7 @@ def personalized_content_predict_main(event,
     
     print('len of content feature', len(content_features))
     
-    # 4. prediction
+    # 4. model prediction
     # define result format
     prediction_scores = [float(score) for score in (xg_reg.predict(content_features.drop('contentId', axis = 1)))]
     
