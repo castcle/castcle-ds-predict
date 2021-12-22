@@ -11,7 +11,7 @@ Data science workflow process of Castcle can be illustrated by the bottom diagra
 
 In the other hands, the workflow process can be separated in to 3 steps which are shown as the top orange blocks in below diagram (orange arrows) corresponding in vertical axis to the bottom diagram. However, non-machine learning (ML)-involved processes will only carry 2 steps (purple arrow).
 
-However, steps 1. and 2. are explained in [castcle-trigger](https://github.com/castcle/castcle-trigger/edit/develop-readme/README.md). are located in another repository i.e. [castcle-trigger](https://github.com/castcle/castcle-trigger/tree/develop). Hence, this will explain only this repository on **step 3**.
+However, steps 1. and 2. are explained in [castcle-trigger](https://github.com/castcle/castcle-trigger/blob/develop/README.md), are located in another repository i.e. [castcle-trigger](https://github.com/castcle/castcle-trigger/tree/main). Hence, this will explain only this repository on **step 3**.
 
 ![castcle_ds_er drawio (5)](https://user-images.githubusercontent.com/90676485/145951393-3af8140e-cc63-429e-b034-94b63de75dfb.png)
 
@@ -64,7 +64,7 @@ This model will be used to ranking/scoring within threshold contents based on en
   - Collection contains "countryCode", model artifacts, and timestamp
 
   4. Model workflow
-  This file explain only model prediction section a.k.a. scoring section. If you would like to see another section, [click here](https://github.com/castcle/castcle-trigger/edit/develop-readme/README.md)
+  This file explain only model prediction section a.k.a. scoring section. If you would like to see another section, [click here](https://github.com/castcle/castcle-trigger/blob/develop/README.md)
    4.1. Content features preparation
      
      1. Engagement List
