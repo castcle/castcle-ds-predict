@@ -89,8 +89,7 @@ This model will be used to ranking/scoring within threshold contents based on en
     - "updatedAt"
     - "createdAt"
      
-![Cold-start](https://user-images.githubusercontent.com/90676485/146301272-4d2cbb07-5810-48b1-ac91-0fddeb04905c.jpg)
-
+![Cold-start (1)](https://user-images.githubusercontent.com/90676485/147532472-2da1afb3-267c-44d4-8dde-7d3f05160f33.jpg)
 
 ## 6. Model Explanation: Personalized Content Model
 This model will be used to rank requested contents based on user’s engagement behaviors. The model will be re-trained everyday in the morning and stored in the mlArtifact collection in db_analytics. The model is for users that have their own personalized model meaning that they have at least one engagement history and can be used to give a wider range of content recommendation combined with cold start model.
@@ -131,4 +130,4 @@ This model will be used to ranking/scoring the requested contents based on user�
   
   4.3.Scoring given contents based on user’s model: Send content score to the Castcle app. 
 
-![Personalized-content](https://user-images.githubusercontent.com/90676485/146510163-3fa087b9-85cd-40f6-832b-c347e25d6f97.jpg)
+![Personalized_content](https://user-images.githubusercontent.com/90676485/147532468-b3a68d3e-4228-4412-b097-d1ef41862693.jpg)
