@@ -19,7 +19,8 @@ def cold_start_by_counytry_scroing( client,
     from datetime import datetime
     from pprint import pprint
     from datetime import datetime, timedelta
-
+    import pymongo
+    
     # connect to database
     appDb = client['app-db']
     analyticsDb = client['analytics-db']
