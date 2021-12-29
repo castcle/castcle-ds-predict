@@ -156,6 +156,9 @@ def cold_start_by_counytry_scroing( client,
     saved_data_country_temporary.rename(saved_data, dropTarget = True)
     print('done_move')
     
+    # indexing 
+    saved_data_country.create_index([("countryCode", pymongo.DESCENDING)])
+    
 def coldstart_score_main(client):
     
     cold_start_by_counytry_scroing( client,
