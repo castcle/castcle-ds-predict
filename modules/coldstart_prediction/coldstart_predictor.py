@@ -1,31 +1,45 @@
+
+# main function of personalize content model prediction
+# 1. get input
+# 2. loading model
+# 3. feature preparation
+# 4. model prediction
+# 5. construct result schemas
+
 def cold_start_by_counytry_scroing( client,
                                     saved_model = 'mlArtifacts_country',
                                     saved_data = 'guestfeeditems',
                                     saved_data_temp = 'guestfeeditemstemps',
-                                    model_name = 'xgboost'):
+                                    model_name = 'xgboost',
+                                    updatedAtThreshold = 30.0):
     
-
     import pandas as pd
     import pickle
     from datetime import datetime
     from pprint import pprint
+    from datetime import datetime, timedelta
 
-
+    # connect to database
     appDb = client['app-db']
     analyticsDb = client['analytics-db']
- 
+
+    # define feature preparation function from content id list
     def prepare_features(client, 
                      analytics_db: str,
                      content_stats_collection: str,
-                     creator_stats_collection: str):
-
-        '''
-        feature preparation from "contentStats" & "creatorStats" for ultilize as feature in model prediction
-        '''
+                     creator_stats_collection: str,
+                     updatedAtThreshold = updatedAtThreshold):
     
     # define cursor of content features
         contentFeaturesCursor = [
-         {
+               {
+            # filter age of contents for only newer than specific days
+                '$match': {
+                    'updatedAt': {
+                        '$gte': (datetime.utcnow() - timedelta(days=updatedAtThreshold))
+                    }
+                }
+            }, {
             # join with creator stats
                 '$lookup': {
                     'from': creator_stats_collection, # previous:'creatorStats',
@@ -59,7 +73,8 @@ def cold_start_by_counytry_scroing( client,
                 }
             }
         ]
-
+    # assign result to dataframe
+    # alias 'contentFeatures'
 
         content_features = pd.DataFrame(list(client[analytics_db][content_stats_collection].aggregate(contentFeaturesCursor))).rename({'_id':'contentId'},axis = 1)
     
@@ -68,24 +83,21 @@ def cold_start_by_counytry_scroing( client,
     contentFeatures = prepare_features(client = client, # default
                                         analytics_db = 'analytics-db',
                                         content_stats_collection = 'contentStats',
-                                        creator_stats_collection = 'creatorStats')
-
+                                        creator_stats_collection = 'creatorStats',
+                                        updatedAtThreshold = updatedAtThreshold)
+    # connect to needed collections
     mlArtifacts_country = analyticsDb[saved_model]
-    ml_set = pd.DataFrame(list(mlArtifacts_country.find()))
+    artifact_list = pd.DataFrame(list(mlArtifacts_country.find()))
     
     saved_data_country = appDb[saved_data]
     
-    saved_data_country_temp = appDb[saved_data_temp]
+    saved_data_country_temporary = appDb[saved_data_temp]
     
-
-    saved_data_country_temp.drop({})
+    # prepare temporary storage
+    saved_data_country_temporary.drop({})
     
+    # load model by country function
     def load_model_from_mongodb(collection, model_name, account):
-
-        '''
-        retrieve model artifact of the user in case of present or country model artifact in case of model artifact absent
-        '''    
-
         json_data = {}
         data = collection.find({
             'account': account,
@@ -99,46 +111,58 @@ def cold_start_by_counytry_scroing( client,
     
         return pickle.loads(pickled_model)
     
-    result = pd.DataFrame()
-    for countryId in list(ml_set.account.unique()):
+    result = pd.DataFrame() # storage for result 
+    
+    # loop for all country list  
+    for countryId in list(artifact_list.account.unique()):
+        
         pprint(countryId)
-        xg_reg_load = load_model_from_mongodb(collection=mlArtifacts_country,
+        # load model 
+        model_load = load_model_from_mongodb(collection=mlArtifacts_country,
                                      account= countryId,
                                      model_name= model_name)
 
-        content_test = contentFeatures
-    
-        a = pd.DataFrame(xg_reg_load.predict(content_test.drop(['contentId'], axis = 1)), columns = ['score'])
-        b = contentFeatures[['contentId']].reset_index(drop = True)
-        c = pd.concat([b,a],axis =1)
-        c['countryCode'] = countryId
-        c['type'] = "content"
-        c['updatedAt'] = datetime.utcnow() 
-        c['createdAt'] = datetime.utcnow() 
-        c = c.rename({"contentId":"content"},axis = 1)
-        c = c.sort_values(by='score', ascending=False)
-        c = c.iloc[:2000,]
-        result = result.append(c)  
+        contentFeatures_for_scoring = contentFeatures
+        
+        # scoring process
+        score = pd.DataFrame(model_load.predict(contentFeatures_for_scoring.drop(['contentId'], axis = 1)), columns = ['score'])
+        
+        # set up schema
+        content_list = contentFeatures[['contentId']].reset_index(drop = True)
+        content_score = pd.concat([content_list,score],axis =1)
+        content_score['countryCode'] = countryId
+        content_score['type'] = "content"
+        content_score['updatedAt'] = datetime.utcnow() 
+        content_score['createdAt'] = datetime.utcnow() 
+        content_score = content_score.rename({"contentId":"content"},axis = 1)
+        content_score = content_score.sort_values(by='score', ascending=False)
+        content_score = content_score.iloc[:2000,]
+        
+        # append result
+        result = result.append(content_score)  
 
         
-    # update collection
+     # update collection
     result.reset_index(inplace=False)
     
     data_dict = result.to_dict("records")
     
-    saved_data_country_temp.insert_many(data_dict)
+    # save to temporary storage
+    saved_data_country_temporary.insert_many(data_dict)
     print('done_save')
 
-    
-    saved_data_country_temp.rename(saved_data, dropTarget = True)
+    # save to target stoage
+    saved_data_country_temporary.rename(saved_data, dropTarget = True)
     print('done_move')
+    
 def coldstart_score_main(client):
     
     cold_start_by_counytry_scroing( client,
                                     saved_model = 'mlArtifacts_country',
                                     saved_data = 'guestfeeditems',
                                     saved_data_temp = 'guestfeeditemstemp',
-                                    model_name = 'xgboost')
+                                    model_name = 'xgboost',
+                                    updatedAtThreshold = 30.0)
     
 
     
