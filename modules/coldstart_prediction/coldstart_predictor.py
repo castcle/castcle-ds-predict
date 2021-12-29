@@ -13,6 +13,7 @@ def cold_start_by_counytry_scroing( client,
                                     model_name = 'xgboost',
                                     updatedAtThreshold = 30.0):
     
+
     import pandas as pd
     import pickle
     from datetime import datetime
