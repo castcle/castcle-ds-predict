@@ -20,7 +20,7 @@ def cold_start_by_counytry_scroing( client,
     from pprint import pprint
     from datetime import datetime, timedelta
     import pymongo
-    
+
     # connect to database
     appDb = client['app-db']
     analyticsDb = client['analytics-db']
@@ -70,7 +70,8 @@ def cold_start_by_counytry_scroing( client,
                     'creatorCommentedCount': '$creatorStats.creatorCommentedCount',
                     'creatorRecastedCount': '$creatorStats.creatorRecastedCount',
                     'creatorQuotedCount': '$creatorStats.creatorQuotedCount',
-                    'ageScore': '$aggregator.ageScore'
+                    'ageScore': '$aggregator.ageScore',
+                    'updatedAt': 1
 
                 }
             }
@@ -86,7 +87,7 @@ def cold_start_by_counytry_scroing( client,
                                         analytics_db = 'analytics-db',
                                         content_stats_collection = 'contentStats',
                                         creator_stats_collection = 'creatorStats',
-                                        updatedAtThreshold = updatedAtThreshold)
+                                        updatedAtThreshold = updatedAtThreshold).rename({'updatedAt':'origin'},axis = 1)
     # connect to needed collections
     mlArtifacts_country = analyticsDb[saved_model]
     artifact_list = pd.DataFrame(list(mlArtifacts_country.find()))
@@ -124,7 +125,7 @@ def cold_start_by_counytry_scroing( client,
                                      account= countryId,
                                      model_name= model_name)
 
-        contentFeatures_for_scoring = contentFeatures
+        contentFeatures_for_scoring = contentFeatures.drop(['origin'], axis=1)
         
         # scoring process
         score = pd.DataFrame(model_load.predict(contentFeatures_for_scoring.drop(['contentId'], axis = 1)), columns = ['score'])
@@ -137,6 +138,14 @@ def cold_start_by_counytry_scroing( client,
         content_score['updatedAt'] = datetime.utcnow() 
         content_score['createdAt'] = datetime.utcnow() 
         content_score = content_score.rename({"contentId":"content"},axis = 1)
+        
+        # add decay function 
+        content_score_add_decay_function = content_score.merge(contentFeatures[['contentId','origin']],right_on = 'contentId', left_on = 'content', how = 'inner')
+        content_score_add_decay_function['time_decay'] = 1/((content_score_add_decay_function['createdAt']-content_score_add_decay_function['origin']).dt.total_seconds()/3600)
+        content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']
+        content_score = content_score_add_decay_function[['content','score','countryCode','type','updatedAt','createdAt']]
+        
+        #set limit
         content_score = content_score.sort_values(by='score', ascending=False)
         content_score = content_score.iloc[:2000,]
         
@@ -157,7 +166,6 @@ def cold_start_by_counytry_scroing( client,
     saved_data_country_temporary.rename(saved_data, dropTarget = True)
     print('done_move')
     
-    # indexing 
     saved_data_country.create_index([("countryCode", pymongo.DESCENDING)])
     
 def coldstart_score_main(client):
