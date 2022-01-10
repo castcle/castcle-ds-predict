@@ -15,7 +15,7 @@ def handle(event, context):
         import friend_to_follow_main
 
     # call modules main function    
-    friend_to_follow_main(client=mongo_client)
+    friend_to_follow_main(event, client=mongo_client)
     
     print('friend_to_follow: ',' completed')
 
