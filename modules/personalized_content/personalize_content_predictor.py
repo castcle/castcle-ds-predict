@@ -1,11 +1,10 @@
 '''
 main function of personalize content model prediction
-1. check database
-2. get input
-3. loading model
-4. feature preparation
-5. model prediction
-6. construct result schemas
+1. get input
+2. loading model
+3. feature preparation
+4. model prediction
+5. construct result schemas
 '''
 import pickle
 from bson import ObjectId
@@ -146,7 +145,8 @@ def prepare_features(mongo_client,
                 'creatorCommentedCount': '$creatorStats.creatorCommentedCount',
                 'creatorRecastedCount': '$creatorStats.creatorRecastedCount',
                 'creatorQuotedCount': '$creatorStats.creatorQuotedCount',
-                'ageScore': '$aggregator.ageScore'
+                'ageScore': '$aggregator.ageScore',
+                'updatedAt': 1
             }
         }
     ]
@@ -190,100 +190,98 @@ def personalized_content_predict_main(event,
     
     '''
     main function of personalize content model prediction
-    1. check database
-    2. get input
-    3. loading model
-    4. feature preparation
-    5. model prediction
-    6. construct result schemas
+    1. get input
+    2. loading model
+    3. feature preparation
+    4. model prediction
+    5. construct result schemas
     '''
 
-    # 1. check database
-    if len(list(mongo_client[app_db][account_collection].find())) == 0 or len(list(mongo_client[src_database_name][content_stats_collection].find())) == 0 or len(list(mongo_client[src_database_name][creator_stats_collection].find())) == 0:
+    # 1. get input
+    # convert to object id
+    account_id = ObjectId(event.get('accountId', None))
+    
+    print("accountId:", account_id)
+    
+    # convert to object id & distinct
+    content_id_list = [ObjectId(content) for content in list(set(event.get('contents', None)))]
+    
+    # define string of content id for response
+    string_content_id_list = list(set(event.get('contents', None)))
+    
+    print('len content id list', len(content_id_list))
 
-        print('there is no document in', app_db, account_collection)
-        print('or', src_database_name, content_stats_collection)
-        print('or', src_database_name, creator_stats_collection)
-
+    # check existence of personalize content artifact of the account 
+    existence = account_artifact_checker(mongo_client,
+                                         src_database_name=src_database_name,
+                                         src_collection_name=src_collection_name, 
+                                         account_id=account_id)
+    
+    # 2. loading model
+    # case mlArtifacts exists
+    if len(list(existence)) != 0: #! in testing, use ""== 0" in deployment use "!= 0"
+        
+        #!
+        print('case: mlArtifact exists')
+        
+        # perform model loading function
+        xg_reg = load_model_from_mongodb(mongo_client,
+                                         src_database_name=src_database_name,
+                                         src_collection_name= src_collection_name,
+                                         model_name= model_name,
+                                         account_id=account_id)
+    
+    # case mlArtifacts does not exists, the model come from coldstart
     else:
+        
+        #!
+        print('case: mlArtifact not exists')
+        
+        # get country code
+        country_code = get_country_code(mongo_client=mongo_client, account_id=account_id, app_db=app_db, account_collection=account_collection)
 
-        # 2. get input
-        # convert to object id
-        account_id = ObjectId(event.get('accountId', None))
+        #!
+        print('country code:', country_code)    
         
-        print("accountId:", account_id)
-        
-        # convert to object id & distinct
-        content_id_list = [ObjectId(content) for content in list(set(event.get('contents', None)))]
-        
-        # define string of content id for response
-        string_content_id_list = list(set(event.get('contents', None)))
-        
-        print('len content id list', len(content_id_list))
+        # perform model loading function
+        xg_reg = load_model_from_mongodb(mongo_client,
+                                         src_database_name=src_database_name,
+                                         src_collection_name= ml_arifact_country_collection,
+                                         model_name= model_name,
+                                         account_id=country_code)
 
-        # check existence of personalize content artifact of the account 
-        existence = account_artifact_checker(mongo_client,
-                                            src_database_name=src_database_name,
-                                            src_collection_name=src_collection_name, 
-                                            account_id=account_id)
-        
-        # 3. loading model
-        # case mlArtifacts exists
-        if len(list(existence)) != 0: #! in testing, use ""== 0" in deployment use "!= 0"
-            
-            #!
-            print('case: mlArtifact exists')
-            
-            # perform model loading function
-            xg_reg = load_model_from_mongodb(mongo_client,
-                                            src_database_name=src_database_name,
-                                            src_collection_name= src_collection_name,
-                                            model_name= model_name,
-                                            account_id=account_id)
-        
-        # case mlArtifacts does not exists, the model come from coldstart
-        else:
-            
-            #!
-            print('case: mlArtifact not exists')
-            
-            # get country code
-            country_code = get_country_code(mongo_client=mongo_client, account_id=account_id, app_db=app_db, account_collection=account_collection)
+    # 3. feature preparation
+    # prepare_features
+    content_features = prepare_features(mongo_client,
+                                        content_id_list,
+                                        analytics_db = analytics_db,
+                                        content_stats_collection = content_stats_collection,
+                                        creator_stats_collection = creator_stats_collection).rename({'updatedAt':'origin'},axis = 1)
+    
+    print('len of content feature', len(content_features))
+    
+    # 4. model prediction
+    # define result format
+    prediction_scores = [float(score) for score in (xg_reg.predict(content_features.drop(['contentId','origin'], axis = 1)))]
+    print(string_content_id_list)
+    print(prediction_scores)
+    print("len prediction_scores:",len(prediction_scores))
 
-            #!
-            print('country code:', country_code)    
-            
-            # perform model loading function
-            xg_reg = load_model_from_mongodb(mongo_client,
-                                            src_database_name=src_database_name,
-                                            src_collection_name= ml_arifact_country_collection,
-                                            model_name= model_name,
-                                            account_id=country_code)
-
-        # 4. feature preparation
-        # prepare_features
-        content_features = prepare_features(mongo_client,
-                                            content_id_list,
-                                            analytics_db = analytics_db,
-                                            content_stats_collection = content_stats_collection,
-                                            creator_stats_collection = creator_stats_collection)
-        
-        print('len of content feature', len(content_features))
-        
-        # 5. model prediction
-        # define result format
-        prediction_scores = [float(score) for score in (xg_reg.predict(content_features.drop('contentId', axis = 1)))]
-        
-        print("len prediction_scores:",len(prediction_scores))
-
-        # 6. construct result schemas
-        result = convert_lists_to_dict(string_content_id_list = string_content_id_list, prediction_scores = prediction_scores)
-
-        print("len result:",len(result))
-        
-        response = {
-            'statusCode': 200,
-            'result': result
-        }
+    # 5. construct result schemas
+    result = convert_lists_to_dict(string_content_id_list = list(content_features['contentId']), prediction_scores = prediction_scores)
+    result = pd.DataFrame(list(result.items()),columns=['contentId', 'score'])
+    result = result.merge(content_features[['contentId','origin']], on = 'contentId', how = 'inner')
+    result['time_decay'] = 1/((datetime.utcnow() - result['origin']).dt.total_seconds()/3600)
+    result['score'] = result['score']*result['time_decay']
+    result = result.sort_values(by='score', ascending=False)
+    result = convert_lists_to_dict(string_content_id_list = list(result['contentId'].astype(str)), prediction_scores = list(result['score']))
+    
+    print(result)
+    print("len result:",len(result))
+    
+    response = {
+        'statusCode': 200,
+        'result': result
+    }
     
     return response
