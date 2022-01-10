@@ -19,6 +19,9 @@ def friend_to_follow(client,
     appDb = client['app-db']
     analyticsDb = client['analytics-db']
     
+    # convert to bson
+    selectUser = ObjectId(selectUser)
+    
     relationship = appDb[relationships]
     relationship = pd.DataFrame(list(relationship.find()))
     
@@ -175,10 +178,13 @@ def friend_to_follow(client,
     return response
     
 
-def friend_to_follow_main(client):
+def friend_to_follow_main(event, client):
+   
+    # temp
+    userId = event.get("userId", None)
     
     friend_to_follow(client,
-                     selectUser = 'userId',
+                     selectUser = userId,
                      relationships = 'relationships') 
     
 
