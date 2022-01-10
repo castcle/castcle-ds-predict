@@ -161,10 +161,12 @@ def friend_to_follow(client,
     if len(sorted_second_degree_frd) < 14:
         add_sorted_second_degree_frd = (sorted_second_degree_frd.append(transaction_engagements.sort_values(by='engagements', ascending=False)[:14])).drop_duplicates(subset = ['userId'], keep= 'first').reset_index(drop = True)
         add_sorted_second_degree_frd['index'] = np.arange(len(add_sorted_second_degree_frd))
+        add_sorted_second_degree_frd.userId = add_sorted_second_degree_frd.userId.astype(str)
         add_sorted_second_degree_frd = add_sorted_second_degree_frd.to_dict(orient='records')
     else : 
         add_sorted_second_degree_frd = sorted_second_degree_frd
         add_sorted_second_degree_frd['index'] = np.arange(len(add_sorted_second_degree_frd))
+        add_sorted_second_degree_frd.userId = add_sorted_second_degree_frd.userId.astype(str)
         add_sorted_second_degree_frd = add_sorted_second_degree_frd.to_dict(orient='records')
     
     print("len result:",len(add_sorted_second_degree_frd ))
