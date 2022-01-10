@@ -146,7 +146,8 @@ def prepare_features(mongo_client,
                 'creatorCommentedCount': '$creatorStats.creatorCommentedCount',
                 'creatorRecastedCount': '$creatorStats.creatorRecastedCount',
                 'creatorQuotedCount': '$creatorStats.creatorQuotedCount',
-                'ageScore': '$aggregator.ageScore'
+                'ageScore': '$aggregator.ageScore',
+                'updatedAt': 1
             }
         }
     ]
@@ -266,18 +267,25 @@ def personalized_content_predict_main(event,
                                             content_id_list,
                                             analytics_db = analytics_db,
                                             content_stats_collection = content_stats_collection,
-                                            creator_stats_collection = creator_stats_collection)
+                                            creator_stats_collection = creator_stats_collection).rename({'updatedAt':'origin'},axis = 1)
         
         print('len of content feature', len(content_features))
         
         # 5. model prediction
         # define result format
-        prediction_scores = [float(score) for score in (xg_reg.predict(content_features.drop('contentId', axis = 1)))]
+        prediction_scores = [float(score) for score in (xg_reg.predict(content_features.drop(['contentId','origin'], axis = 1)))]
         
         print("len prediction_scores:",len(prediction_scores))
 
         # 6. construct result schemas
-        result = convert_lists_to_dict(string_content_id_list = string_content_id_list, prediction_scores = prediction_scores)
+        result = convert_lists_to_dict(string_content_id_list = list(content_features['contentId']), prediction_scores = prediction_scores)
+        result = pd.DataFrame(list(result.items()),columns=['contentId', 'score'])
+        result = result.merge(content_features[['contentId','origin']], on = 'contentId', how = 'inner')
+        result['time_decay'] = 1/((datetime.utcnow() - result['origin']).dt.total_seconds()/3600)
+        result['score'] = result['score']*result['time_decay']
+        result = result.sort_values(by='score', ascending=False)
+        result = convert_lists_to_dict(string_content_id_list = list(result['contentId'].astype(str)), prediction_scores = list(result['score']))
+    
 
         print("len result:",len(result))
         
