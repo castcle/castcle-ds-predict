@@ -15,13 +15,14 @@ def handle(event, context):
         import friend_to_follow_main
 
     # call modules main function    
-    friend_to_follow_main(event, client=mongo_client)
+    result = friend_to_follow_main(event, client=mongo_client)
     
     print('friend_to_follow: ',' completed')
 
     # return output as status code and timestamp
     return {
         "statusCode": 200,
-        "predicted_at": str(datetime.datetime.now())
+        "predicted_at": str(datetime.datetime.now()),
+        "result": result
     }
     
