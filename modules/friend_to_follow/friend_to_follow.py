@@ -171,7 +171,6 @@ def friend_to_follow(client,
     print(add_sorted_second_degree_frd)
     
     response = {
-        'statusCode': 200,
         'result': add_sorted_second_degree_frd
     }
 
@@ -183,10 +182,10 @@ def friend_to_follow_main(event, client):
     # temp
     userId = event.get("userId", None)
     
-    friend_to_follow(client,
+    result = friend_to_follow(client,
                      selectUser = userId,
                      relationships = 'relationships') 
     
 
     
-    return
+    return result
