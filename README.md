@@ -4,14 +4,14 @@ Cascle's feed algorithm has tailored from 2 regimes i.e. **App** and **Analytics
 
 Moreover, **Aggregators** are respond to logically filter contents from **Inventory** in different ways. **Ranker** consumes features from **Feature Extractors** , Trained model artifact from **Model Training** and aggregated/filtered contents from **Aggregators** to ranking/scoring tend of engagement for the user using **Model Prediction** then feeds a certain amount to user's UI. More precisely, user interaction or engagement will be recorded to database for purpose of further **Analytics** and model evaluation.
 
-![castcle_ds_overviewdrawio drawio](https://user-images.githubusercontent.com/90676485/146522100-d2492e44-b897-478a-94f5-86b6c990bd5b.png)
+![castcle_ds_overviewdrawio drawio (7)](https://user-images.githubusercontent.com/90676485/147076667-e5de903e-ebde-488a-8cf0-a14ace50a777.png)
 
 ## 2. Workflow Process
 Data science workflow process of Castcle can be illustrated by the bottom diagram of the below figure exhibits overall workflow process interacts across databases i.e. blue blocks represent collections in `app-db` and green blocks represents collections in `analytics-db` databases in Mongodb Atlas, respectively. The bold arrows stand for presence of entity key relation between collections, the dot arrows reflect data extraction by either aggregation or calculation, and the two-headed arrows represents swap event.
 
 In the other hands, the workflow process can be separated in to 3 steps which are shown as the top orange blocks in below diagram (orange arrows) corresponding in vertical axis to the bottom diagram. However, non-machine learning (ML)-involved processes will only carry 2 steps (purple arrow).
 
-However, steps 1. and 2. are explained in [castcle-trigger](https://github.com/castcle/castcle-trigger/edit/develop-readme/README.md). are located in another repository i.e. [castcle-trigger](https://github.com/castcle/castcle-trigger/tree/develop). Hence, this will explain only this repository on **step 3**.
+However, steps 1. and 2. are explained in [castcle-trigger](https://github.com/castcle/castcle-trigger/blob/develop/README.md), are located in another repository i.e. [castcle-trigger](https://github.com/castcle/castcle-trigger/tree/main). Hence, this will explain only this repository on **step 3**.
 
 ![castcle_ds_er drawio (5)](https://user-images.githubusercontent.com/90676485/145951393-3af8140e-cc63-429e-b034-94b63de75dfb.png)
 
@@ -64,7 +64,7 @@ This model will be used to ranking/scoring within threshold contents based on en
   - Collection contains "countryCode", model artifacts, and timestamp
 
   4. Model workflow
-  This file explain only model prediction section a.k.a. scoring section. If you would like to see another section, [click here](https://github.com/castcle/castcle-trigger/edit/develop-readme/README.md)
+  This file explain only model prediction section a.k.a. scoring section. If you would like to see another section, [click here](https://github.com/castcle/castcle-trigger/blob/develop/README.md)
    4.1. Content features preparation
      
      1. Engagement List
@@ -89,8 +89,7 @@ This model will be used to ranking/scoring within threshold contents based on en
     - "updatedAt"
     - "createdAt"
      
-![Cold-start](https://user-images.githubusercontent.com/90676485/146301272-4d2cbb07-5810-48b1-ac91-0fddeb04905c.jpg)
-
+![Cold-start (1)](https://user-images.githubusercontent.com/90676485/147532472-2da1afb3-267c-44d4-8dde-7d3f05160f33.jpg)
 
 ## 6. Model Explanation: Personalized Content Model
 This model will be used to rank requested contents based on user’s engagement behaviors. The model will be re-trained everyday in the morning and stored in the mlArtifact collection in db_analytics. The model is for users that have their own personalized model meaning that they have at least one engagement history and can be used to give a wider range of content recommendation combined with cold start model.
@@ -131,4 +130,4 @@ This model will be used to ranking/scoring the requested contents based on user�
   
   4.3.Scoring given contents based on user’s model: Send content score to the Castcle app. 
 
-![Personalized-content](https://user-images.githubusercontent.com/90676485/146510163-3fa087b9-85cd-40f6-832b-c347e25d6f97.jpg)
+![Personalized_content](https://user-images.githubusercontent.com/90676485/147532468-b3a68d3e-4228-4412-b097-d1ef41862693.jpg)
