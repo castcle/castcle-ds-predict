@@ -271,27 +271,33 @@ def personalized_content_predict_main(event,
         
         print('len of content feature', len(content_features))
         
-        # 5. model prediction
-        # define result format
-        prediction_scores = [float(score) for score in (xg_reg.predict(content_features.drop(['contentId','origin'], axis = 1)))]
-        
-        print("len prediction_scores:",len(prediction_scores))
+            # 5. model prediction
+            # define result format
+        try:
+            prediction_scores = [float(score) for score in (xg_reg.predict(content_features.drop(['contentId','origin'], axis = 1)))]
+            
+            print("len prediction_scores:",len(prediction_scores))
 
-        # 6. construct result schemas
-        result = convert_lists_to_dict(string_content_id_list = list(content_features['contentId']), prediction_scores = prediction_scores)
-        result = pd.DataFrame(list(result.items()),columns=['contentId', 'score'])
-        result = result.merge(content_features[['contentId','origin']], on = 'contentId', how = 'inner')
-        result['time_decay'] = 1/((datetime.utcnow() - result['origin']).dt.total_seconds()/3600)
-        result['score'] = result['score']*result['time_decay']
-        result = result.sort_values(by='score', ascending=False)
-        result = convert_lists_to_dict(string_content_id_list = list(result['contentId'].astype(str)), prediction_scores = list(result['score']))
+            # 6. construct result schemas
+            result = convert_lists_to_dict(string_content_id_list = list(content_features['contentId']), prediction_scores = prediction_scores)
+            result = pd.DataFrame(list(result.items()),columns=['contentId', 'score'])
+            result = result.merge(content_features[['contentId','origin']], on = 'contentId', how = 'inner')
+            result['time_decay'] = 1/((datetime.utcnow() - result['origin']).dt.total_seconds()/3600)
+            result['score'] = result['score']*result['time_decay']
+            result = result.sort_values(by='score', ascending=False)
+            result = convert_lists_to_dict(string_content_id_list = list(result['contentId'].astype(str)), prediction_scores = list(result['score']))
     
 
-        print("len result:",len(result))
+            print("len result:",len(result))
         
-        response = {
+            response = {
             'statusCode': 200,
             'result': result
-        }
+            }
+        except:
+            response = {
+            'statusCode': 200,
+            'result':'No_match_content_found'
+            }
     
     return response
