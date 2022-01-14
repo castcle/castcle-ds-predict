@@ -185,7 +185,7 @@ def friend_to_follow(client,
     return response
     
 
-def friend_to_follow_main(client):
+def friend_to_follow_main(event, client):
     userId = event.get("userId", None)
     result = friend_to_follow(client,
                      selectUser = userId,
