@@ -1,6 +1,7 @@
 def friend_to_follow(client,
                      selectUser = 'userId',
-                     relationships = 'relationships'):
+                     relationships = 'relationships',
+                     number_frds = 14):
     
     import pymongo # connect to MongoDB
     from pymongo import MongoClient # client connection to MongoDB
@@ -19,9 +20,6 @@ def friend_to_follow(client,
     appDb = client['app-db']
     analyticsDb = client['analytics-db']
     
-    # convert to bson
-    selectUser = ObjectId(selectUser)
-    
     relationship = appDb[relationships]
     relationship = pd.DataFrame(list(relationship.find()))
     
@@ -30,8 +28,11 @@ def friend_to_follow(client,
         path_lengths = nx.single_source_dijkstra_path_length(G, node)
         return [node for node, length in path_lengths.items()
                         if length == n]
-    second_degree_frds = pd.DataFrame(neighborhood(G, selectUser, 2),columns=['userId'])
-    
+    try: 
+        second_degree_frds = pd.DataFrame(neighborhood(G, ObjectId(selectUser), 2),columns=['userId'])
+    except:
+        secound_degree_frds = pd.DataFrame(columns=['userId'])
+        
     transactionEngagementsCursor = [
         {
             # join to map account id
@@ -156,18 +157,23 @@ def friend_to_follow(client,
     add_data = pd.DataFrame(data).drop_duplicates(subset = ['userId'])
     transaction_engagements = (transaction_engagements.append(add_data)).reset_index(drop = True)
     
-    sorted_second_degree_frd = second_degree_frds.merge(transaction_engagements, on = 'userId', how = 'left' ).sort_values(by='engagements', ascending=False)
+    try:
+        sorted_second_degree_frd = second_degree_frds.merge(transaction_engagements, on = 'userId', how = 'left' ).sort_values(by='engagements', ascending=False)
+    except:
+        sorted_second_degree_frd = secound_degree_frds
     
-    if len(sorted_second_degree_frd) < 14:
-        add_sorted_second_degree_frd = (sorted_second_degree_frd.append(transaction_engagements.sort_values(by='engagements', ascending=False)[:14])).drop_duplicates(subset = ['userId'], keep= 'first').reset_index(drop = True)
+    if len(sorted_second_degree_frd) < number_frds:
+        add_sorted_second_degree_frd = (sorted_second_degree_frd.append(transaction_engagements.sort_values(by='engagements', ascending=False)[:number_frds])).drop_duplicates(subset = ['userId'], keep= 'first').reset_index(drop = True)
         add_sorted_second_degree_frd['index'] = np.arange(len(add_sorted_second_degree_frd))
         add_sorted_second_degree_frd.userId = add_sorted_second_degree_frd.userId.astype(str)
         add_sorted_second_degree_frd = add_sorted_second_degree_frd.to_dict(orient='records')
+        print("individual second degree frds:",len(sorted_second_degree_frd))
     else : 
         add_sorted_second_degree_frd = sorted_second_degree_frd
         add_sorted_second_degree_frd['index'] = np.arange(len(add_sorted_second_degree_frd))
         add_sorted_second_degree_frd.userId = add_sorted_second_degree_frd.userId.astype(str)
         add_sorted_second_degree_frd = add_sorted_second_degree_frd.to_dict(orient='records')
+        print("individual second degree frds:",len(sorted_second_degree_frd))
     
     print("len result:",len(add_sorted_second_degree_frd ))
     print(add_sorted_second_degree_frd)
@@ -179,15 +185,14 @@ def friend_to_follow(client,
     return response
     
 
-def friend_to_follow_main(event, client):
-   
-    # temp
-    userId = event.get("userId", None)
+def friend_to_follow_main(client):
     
     result = friend_to_follow(client,
-                     selectUser = userId,
-                     relationships = 'relationships') 
+                     selectUser = '6170067a51db852fb36d2109',
+                     relationships = 'relationships',
+                     number_frds = 14) 
     
 
     
     return result
+    
