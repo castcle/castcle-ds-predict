@@ -29,7 +29,7 @@ def friend_to_follow(client,
         return [node for node, length in path_lengths.items()
                         if length == n]
     try: 
-        second_degree_frds = pd.DataFrame(neighborhood(G, ObjectId(selectUser), 2),columns=['userId'])
+        second_degree_frds = pd.DataFrame(neighborhood(G, selectUser, 2),columns=['userId'])
     except:
         secound_degree_frds = pd.DataFrame(columns=['userId'])
         
@@ -186,13 +186,12 @@ def friend_to_follow(client,
     
 
 def friend_to_follow_main(client):
-    
+    userId = event.get("userId", None)
     result = friend_to_follow(client,
-                     selectUser = '6170067a51db852fb36d2109',
+                     selectUser = userId,
                      relationships = 'relationships',
                      number_frds = 14) 
     
 
     
     return result
-    
