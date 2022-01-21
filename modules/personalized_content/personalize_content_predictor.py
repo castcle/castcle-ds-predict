@@ -205,7 +205,31 @@ def personalized_content_predict_main(event,
     # 1. check database
     t1_start = time.time()
     print("[Start] Check database:", t1_start)
-    if len(list(mongo_client[app_db][account_collection].find())) == 0 or len(list(mongo_client[src_database_name][content_stats_collection].find())) == 0 or len(list(mongo_client[src_database_name][creator_stats_collection].find())) == 0:
+
+    #mongodb check collection exists
+    appDB = mongo_client[app_db]
+    anaDB = mongo_client[src_database_name]
+    coll_appDB = appDB.list_collection_names()
+    coll_anaDB = anaDB.list_collection_names()
+
+    if not account_collection in coll_appDB:
+        account_collection_missing = True
+    else:
+        account_collection_missing = False
+
+    if not content_stats_collection in coll_anaDB:
+        content_stats_collection_missing = True
+    else:
+        content_stats_collection_missing = False
+
+    if not creator_stats_collection in coll_anaDB:
+        creator_stats_collection_missing = True
+    else:
+        creator_stats_collection_missing = False
+
+    if account_collection_missing \
+        or content_stats_collection_missing \
+        or creator_stats_collection_missing:
 
         print('there is no document in', app_db, account_collection)
         print('or', src_database_name, content_stats_collection)
@@ -350,5 +374,6 @@ def personalized_content_predict_main(event,
             t5_2_end = time.time()
             print("[End] Model prediction:", t5_2_end)
             print("[Time] Model prediction, cannot predict", t5_2_end - t5_start)
+            print("=============================================================")
     
     return response
