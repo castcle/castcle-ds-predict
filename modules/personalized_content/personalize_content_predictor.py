@@ -212,17 +212,51 @@ def personalized_content_predict_main(event,
     coll_appDB = appDB.list_collection_names()
     coll_anaDB = anaDB.list_collection_names()
 
-    if not account_collection in coll_appDB:
+    account_collection_return = appDB[account_collection].aggregate([
+        {
+            "$limit": 1
+        }, {
+            "$project": {
+                "_id": 1
+            }
+        }
+    ])
+
+    content_stats_collection_return = anaDB[content_stats_collection].aggregate([
+        {
+            "$limit": 1
+        }, {
+            "$project": {
+                "_id": 1
+            }
+        }
+    ])
+
+    creator_stats_collection_return = anaDB[creator_stats_collection].aggregate([
+        {
+            "$limit": 1
+        }, {
+            "$project": {
+                "_id": 1
+            }
+        }
+    ])
+
+    account_collection_size = len(list(account_collection_return))
+    content_stats_collection_size = len(list(content_stats_collection_return))
+    creator_stats_collection_size = len(list(creator_stats_collection_return))
+
+    if (account_collection in coll_appDB) and (account_collection_size == 0):
         account_collection_missing = True
     else:
         account_collection_missing = False
 
-    if not content_stats_collection in coll_anaDB:
+    if (content_stats_collection in coll_anaDB) and (content_stats_collection_size == 0):
         content_stats_collection_missing = True
     else:
         content_stats_collection_missing = False
 
-    if not creator_stats_collection in coll_anaDB:
+    if (creator_stats_collection in coll_anaDB) and (creator_stats_collection_size == 0):
         creator_stats_collection_missing = True
     else:
         creator_stats_collection_missing = False
