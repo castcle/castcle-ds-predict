@@ -247,23 +247,23 @@ def personalized_content_predict_main(event,
     creator_stats_collection_size = len(list(creator_stats_collection_return))
 
     if (account_collection in coll_appDB) and (account_collection_size == 0):
-        account_collection_missing = True
+        account_collection_doc_missing = True
     else:
-        account_collection_missing = False
+        account_collection_doc_missing = False
 
     if (content_stats_collection in coll_anaDB) and (content_stats_collection_size == 0):
-        content_stats_collection_missing = True
+        content_stats_collection_doc_missing = True
     else:
-        content_stats_collection_missing = False
+        content_stats_collection_doc_missing = False
 
     if (creator_stats_collection in coll_anaDB) and (creator_stats_collection_size == 0):
-        creator_stats_collection_missing = True
+        creator_stats_collection_doc_missing = True
     else:
-        creator_stats_collection_missing = False
+        creator_stats_collection_doc_missing = False
 
-    if account_collection_missing \
-        or content_stats_collection_missing \
-        or creator_stats_collection_missing:
+    if account_collection_doc_missing \
+        or content_stats_collection_doc_missing \
+        or creator_stats_collection_doc_missing:
 
         print('there is no document in', app_db, account_collection)
         print('or', src_database_name, content_stats_collection)
