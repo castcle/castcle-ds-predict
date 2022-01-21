@@ -212,24 +212,58 @@ def personalized_content_predict_main(event,
     coll_appDB = appDB.list_collection_names()
     coll_anaDB = anaDB.list_collection_names()
 
-    if not account_collection in coll_appDB:
-        account_collection_missing = True
-    else:
-        account_collection_missing = False
+    account_collection_return = appDB[account_collection].aggregate([
+        {
+            "$limit": 1
+        }, {
+            "$project": {
+                "_id": 1
+            }
+        }
+    ])
 
-    if not content_stats_collection in coll_anaDB:
-        content_stats_collection_missing = True
-    else:
-        content_stats_collection_missing = False
+    content_stats_collection_return = anaDB[content_stats_collection].aggregate([
+        {
+            "$limit": 1
+        }, {
+            "$project": {
+                "_id": 1
+            }
+        }
+    ])
 
-    if not creator_stats_collection in coll_anaDB:
-        creator_stats_collection_missing = True
-    else:
-        creator_stats_collection_missing = False
+    creator_stats_collection_return = anaDB[creator_stats_collection].aggregate([
+        {
+            "$limit": 1
+        }, {
+            "$project": {
+                "_id": 1
+            }
+        }
+    ])
 
-    if account_collection_missing \
-        or content_stats_collection_missing \
-        or creator_stats_collection_missing:
+    account_collection_size = len(list(account_collection_return))
+    content_stats_collection_size = len(list(content_stats_collection_return))
+    creator_stats_collection_size = len(list(creator_stats_collection_return))
+
+    if (account_collection in coll_appDB) and (account_collection_size == 0):
+        account_collection_doc_missing = True
+    else:
+        account_collection_doc_missing = False
+
+    if (content_stats_collection in coll_anaDB) and (content_stats_collection_size == 0):
+        content_stats_collection_doc_missing = True
+    else:
+        content_stats_collection_doc_missing = False
+
+    if (creator_stats_collection in coll_anaDB) and (creator_stats_collection_size == 0):
+        creator_stats_collection_doc_missing = True
+    else:
+        creator_stats_collection_doc_missing = False
+
+    if account_collection_doc_missing \
+        or content_stats_collection_doc_missing \
+        or creator_stats_collection_doc_missing:
 
         print('there is no document in', app_db, account_collection)
         print('or', src_database_name, content_stats_collection)
