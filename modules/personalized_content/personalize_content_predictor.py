@@ -175,6 +175,17 @@ def convert_lists_to_dict(string_content_id_list,
     
     return result
 
+def prediction_fail_response(event) -> dict:
+    # convert to object id & distinct
+    no_set_contents = event.get('contents', None)
+    
+    set_contents = set(no_set_contents)
+    content_id_list = [content for content in set_contents]
+    string_content_id_list = list(content_id_list)
+
+    fail_result_dict = { i : 0 for i in string_content_id_list }
+
+    return fail_result_dict
 
 # define main function
 def personalized_content_predict_main(event,
@@ -390,8 +401,9 @@ def personalized_content_predict_main(event,
             print("len result:",len(result))
         
             response = {
-            'statusCode': 200,
-            'result': result
+            'errorCode': 200,
+            'result': result,
+            'remark': 'OK'
             }
 
             t5_1_end = time.time()
@@ -399,10 +411,14 @@ def personalized_content_predict_main(event,
             print("[Time] Model prediction, can predict:", t5_1_end - t5_start)
             print("=============================================================")
 
-        except:
+        except Exception as e:
+
+            fail_response = prediction_fail_response(event=event)
+
             response = {
-            'statusCode': 200,
-            'result':'No_match_content_found'
+            'errorCode': 200,
+            'result': fail_response,
+            'remark': f'{e}'
             }
 
             t5_2_end = time.time()
