@@ -92,6 +92,16 @@ functions:
       name: app_image
       command:
         - per_ct_predictor.handle
+  friendToFollow:
+    name: ${self:provider.stage}-ds-predict-friend-to-follow
+    memorySize: 2048
+    warmup:
+      default:
+        enabled: true
+    image:
+      name: app_image
+      command:
+        - friend_to_follow.handle
   coldStartPredictor:
     name: ${self:provider.stage}-ds-predict-coldstart-predictor
     memorySize: 2048

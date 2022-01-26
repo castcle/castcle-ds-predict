@@ -8,3 +8,4 @@ google-api-core==2.1.1
 google-auth==2.3.0
 google-cloud-language==2.3.0
 googleapis-common-protos==1.53.0
+networkx==2.5.0
