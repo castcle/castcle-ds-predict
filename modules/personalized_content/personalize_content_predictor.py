@@ -391,6 +391,7 @@ def personalized_content_predict_main(event,
             # 6. construct result schemas
             result = convert_lists_to_dict(string_content_id_list = list(content_features['contentId']), prediction_scores = prediction_scores)
             result = pd.DataFrame(list(result.items()),columns=['contentId', 'score'])
+            # add created date in ordeer to use decay function
             result = result.merge(content_features[['contentId','origin']], on = 'contentId', how = 'inner')
             result['time_decay'] = 1/((datetime.utcnow() - result['origin']).dt.total_seconds()/3600)
             result['score'] = result['score']*result['time_decay']
