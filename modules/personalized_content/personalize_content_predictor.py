@@ -401,7 +401,7 @@ def personalized_content_predict_main(event,
             print("len result:",len(result))
         
             response = {
-            'errorCode': 200,
+            'code': 200,
             'result': result,
             'remark': 'OK'
             }
@@ -414,11 +414,13 @@ def personalized_content_predict_main(event,
         except Exception as e:
 
             fail_response = prediction_fail_response(event=event)
+            print("Exception: {0}".format(e))
 
             response = {
-            'errorCode': 200,
+            'code': 1001,
             'result': fail_response,
-            'remark': f'{e}'
+            'remark': """Sorry, Can not predict the contents 
+                please change the contents."""
             }
 
             t5_2_end = time.time()
