@@ -43,7 +43,7 @@ In this section we will describe only collections those are interacted as output
  1. [requirements.txt](https://github.com/castcle/castcle-ds-predict/blob/develop/requirements.txt): contains necessary libraries.
  2. [serverless.yml](https://github.com/castcle/castcle-ds-predict/blob/develop/serverless.yml): contains configuration.
  3. python caller files (.py): responses for calling main function in [modules](https://github.com/castcle/castcle-ds-predict/tree/develop/modules),
-  - [x] [coldstart_predictor.py](https://github.com/castcle/castcle-ds-predict/blob/main/coldstart_predictor.py): responses for calling to execute [coldstart_predictor.py](https://github.com/castcle/castcle-ds-predict/blob/main/modules/coldstart_prediction/coldstart_predictor.py) to update `app-db.guestfeeditemstemp` and `app-db.guestfeeditems`.
+  - [x] [coldstart_predictor.py](https://github.com/castcle/castcle-ds-predict/blob/main/coldstart_predictor.py): responses for calling to execute [coldstart_predictor.py](https://github.com/castcle/castcle-ds-predict/blob/main/modules/coldstart/coldstart_predictor.py) to update `app-db.guestfeeditemstemp` and `app-db.guestfeeditems`.
   - [x] [per_ct_predictor.py](https://github.com/castcle/castcle-ds-predict/blob/main/per_ct_predictor.py): responses for calling to execute [personalize_content_predictor.py](https://github.com/castcle/castcle-ds-predict/blob/main/modules/personalized_content/personalize_content_predictor.py). In contrast to `coldstart_predictor.py`, the output is returned as message response.
   4. [modules](https://github.com/castcle/castcle-ds-predict/tree/develop/modules) python files (.py): contain main function files which are located inside sub-folders for operate with correspond python caller file.
 

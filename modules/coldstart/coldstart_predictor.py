@@ -11,7 +11,7 @@ def cold_start_by_counytry_scroing( client,
                                     saved_data = 'guestfeeditems',
                                     saved_data_temp = 'guestfeeditemstemps',
                                     model_name = 'xgboost',
-                                    updatedAtThreshold = 30.0):
+                                    updatedAtThreshold = 7.0):
     
 
     import pandas as pd
@@ -168,14 +168,16 @@ def cold_start_by_counytry_scroing( client,
     
     saved_data_country.create_index([("countryCode", pymongo.DESCENDING)])
     
-def coldstart_score_main(client):
+def coldstart_score_main(
+        client,
+        updatedAtThreshold=7.0):
     
     cold_start_by_counytry_scroing( client,
                                     saved_model = 'mlArtifacts_country',
                                     saved_data = 'guestfeeditems',
                                     saved_data_temp = 'guestfeeditemstemp',
                                     model_name = 'xgboost',
-                                    updatedAtThreshold = 30.0)
+                                    updatedAtThreshold = updatedAtThreshold)
     
 
     
