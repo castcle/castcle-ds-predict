@@ -178,15 +178,14 @@ def friend_to_follow(client,
     print("len result:",len(add_sorted_second_degree_frd ))
     print(add_sorted_second_degree_frd)
     
-    response = {
-        'result': add_sorted_second_degree_frd
-    }
+    response = add_sorted_second_degree_frd
+    
 
     return response
     
 
 def friend_to_follow_main(event, client):
-    userId = event.get("userId", None)
+    userId = event.get("accountId", None)
     result = friend_to_follow(client,
                      selectUser = userId,
                      relationships = 'relationships',

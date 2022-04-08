@@ -11,11 +11,13 @@ def handle(event, context):
 
     print(json.dumps(event, indent=4))
     
-    from modules.coldstart_prediction.coldstart_predictor \
+    from modules.coldstart.coldstart_predictor \
         import coldstart_score_main
 
     # call modules main function    
-    coldstart_score_main(client=mongo_client)
+    coldstart_score_main(
+        client=mongo_client,
+        updatedAtThreshold=7.0)
     
     print('prediction of coldstart: ',' completed')
 

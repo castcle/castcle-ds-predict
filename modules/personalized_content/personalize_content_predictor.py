@@ -175,6 +175,17 @@ def convert_lists_to_dict(string_content_id_list,
     
     return result
 
+def prediction_fail_response(event) -> dict:
+    # convert to object id & distinct
+    no_set_contents = event.get('contents', None)
+    
+    set_contents = set(no_set_contents)
+    content_id_list = [content for content in set_contents]
+    string_content_id_list = list(content_id_list)
+
+    fail_result_dict = { i : 0 for i in string_content_id_list }
+
+    return fail_result_dict
 
 # define main function
 def personalized_content_predict_main(event,
@@ -188,6 +199,7 @@ def personalized_content_predict_main(event,
                                       creator_stats_collection: str,
                                       content_stats_collection: str,
                                       model_name: str):
+    import time
     
     '''
     main function of personalize content model prediction
@@ -198,16 +210,83 @@ def personalized_content_predict_main(event,
     5. model prediction
     6. construct result schemas
     '''
-
+    print("=============================================================")
+    start = time.time()
+    print("[Start] :", start)
     # 1. check database
-    if len(list(mongo_client[app_db][account_collection].find())) == 0 or len(list(mongo_client[src_database_name][content_stats_collection].find())) == 0 or len(list(mongo_client[src_database_name][creator_stats_collection].find())) == 0:
+    t1_start = time.time()
+    print("[Start] Check database:", t1_start)
+
+    #mongodb check collection exists
+    appDB = mongo_client[app_db]
+    anaDB = mongo_client[src_database_name]
+    coll_appDB = appDB.list_collection_names()
+    coll_anaDB = anaDB.list_collection_names()
+
+    account_collection_return = appDB[account_collection].aggregate([
+        {
+            "$limit": 1
+        }, {
+            "$project": {
+                "_id": 1
+            }
+        }
+    ])
+
+    content_stats_collection_return = anaDB[content_stats_collection].aggregate([
+        {
+            "$limit": 1
+        }, {
+            "$project": {
+                "_id": 1
+            }
+        }
+    ])
+
+    creator_stats_collection_return = anaDB[creator_stats_collection].aggregate([
+        {
+            "$limit": 1
+        }, {
+            "$project": {
+                "_id": 1
+            }
+        }
+    ])
+
+    account_collection_size = len(list(account_collection_return))
+    content_stats_collection_size = len(list(content_stats_collection_return))
+    creator_stats_collection_size = len(list(creator_stats_collection_return))
+
+    if (account_collection in coll_appDB) and (account_collection_size == 0):
+        account_collection_doc_missing = True
+    else:
+        account_collection_doc_missing = False
+
+    if (content_stats_collection in coll_anaDB) and (content_stats_collection_size == 0):
+        content_stats_collection_doc_missing = True
+    else:
+        content_stats_collection_doc_missing = False
+
+    if (creator_stats_collection in coll_anaDB) and (creator_stats_collection_size == 0):
+        creator_stats_collection_doc_missing = True
+    else:
+        creator_stats_collection_doc_missing = False
+
+    if account_collection_doc_missing \
+        or content_stats_collection_doc_missing \
+        or creator_stats_collection_doc_missing:
 
         print('there is no document in', app_db, account_collection)
         print('or', src_database_name, content_stats_collection)
         print('or', src_database_name, creator_stats_collection)
-
+        t1_end = time.time()
+        print("[End] If check database fail:", t1_end)
+        print("[Time] Check database fail", t1_end - t1_start)
+        print("=============================================================")
     else:
 
+        t2_start = time.time()
+        print("[Start] If check database success, Getting input:", t2_start)
         # 2. get input
         # convert to object id
         account_id = ObjectId(event.get('accountId', None))
@@ -227,9 +306,17 @@ def personalized_content_predict_main(event,
                                             src_database_name=src_database_name,
                                             src_collection_name=src_collection_name, 
                                             account_id=account_id)
+
+        t2_end = time.time()
+        print("[End] Getting input:", t2_end)
+        print("[Time] Getting input:", t2_end - t2_start)
+        print("=============================================================")
         
         # 3. loading model
+        t3_start = time.time()
+        print("[Start] Loading model:", t3_start)
         # case mlArtifacts exists
+        
         if len(list(existence)) != 0: #! in testing, use ""== 0" in deployment use "!= 0"
             
             #!
@@ -241,6 +328,11 @@ def personalized_content_predict_main(event,
                                             src_collection_name= src_collection_name,
                                             model_name= model_name,
                                             account_id=account_id)
+
+            t3_1_end = time.time()
+            print("[End] Artifact exists:", t3_1_end)
+            print("[Time] Loading model, artifact exists:", t3_1_end - t3_start)
+            print("=============================================================")
         
         # case mlArtifacts does not exists, the model come from coldstart
         else:
@@ -261,7 +353,18 @@ def personalized_content_predict_main(event,
                                             model_name= model_name,
                                             account_id=country_code)
 
+            t3_2_end = time.time()
+            print("[End] Artifact not exists:", t3_2_end)
+            print("[Time] Loading model, artifact not exists:", t3_2_end - t3_start)
+            print("=============================================================")
+
+        t3_end = time.time()
+        print("[End] Loading model:", t3_end)
+        print("[Time] Loading model", t3_end - t3_start)
+        print("=============================================================")
         # 4. feature preparation
+        t4_start = time.time()
+        print("[Start] Feature preparation:", t4_start)
         # prepare_features
         content_features = prepare_features(mongo_client,
                                             content_id_list,
@@ -270,9 +373,16 @@ def personalized_content_predict_main(event,
                                             creator_stats_collection = creator_stats_collection).rename({'updatedAt':'origin'},axis = 1)
         
         print('len of content feature', len(content_features))
+
+        t4_end = time.time()
+        print("[End] Feature preparation:", t4_end)
+        print("[Time] Feature preparation:", t4_end - t4_start)
+        print("=============================================================")
         
-            # 5. model prediction
-            # define result format
+        # 5. model prediction
+        t5_start = time.time()
+        print("[Start] Model prediction:", t5_start)
+        # define result format
         try:
             prediction_scores = [float(score) for score in (xg_reg.predict(content_features.drop(['contentId','origin'], axis = 1)))]
             
@@ -281,6 +391,7 @@ def personalized_content_predict_main(event,
             # 6. construct result schemas
             result = convert_lists_to_dict(string_content_id_list = list(content_features['contentId']), prediction_scores = prediction_scores)
             result = pd.DataFrame(list(result.items()),columns=['contentId', 'score'])
+            # add created date in ordeer to use decay function
             result = result.merge(content_features[['contentId','origin']], on = 'contentId', how = 'inner')
             result['time_decay'] = 1/((datetime.utcnow() - result['origin']).dt.total_seconds()/3600)
             result['score'] = result['score']*result['time_decay']
@@ -291,13 +402,31 @@ def personalized_content_predict_main(event,
             print("len result:",len(result))
         
             response = {
-            'statusCode': 200,
-            'result': result
+            'code': 200,
+            'result': result,
+            'remark': 'OK'
             }
-        except:
+
+            t5_1_end = time.time()
+            print("[End] Model prediction:", t5_1_end)
+            print("[Time] Model prediction, can predict:", t5_1_end - t5_start)
+            print("=============================================================")
+
+        except Exception as e:
+
+            fail_response = prediction_fail_response(event=event)
+            print("Exception: {0}".format(e))
+
             response = {
-            'statusCode': 200,
-            'result':'No_match_content_found'
+            'code': 1001,
+            'result': fail_response,
+            'remark': """Sorry, Can not predict the contents 
+                please change the contents."""
             }
+
+            t5_2_end = time.time()
+            print("[End] Model prediction:", t5_2_end)
+            print("[Time] Model prediction, cannot predict", t5_2_end - t5_start)
+            print("=============================================================")
     
     return response
