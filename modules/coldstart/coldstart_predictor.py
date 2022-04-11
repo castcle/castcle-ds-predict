@@ -31,9 +31,10 @@ def _add_contentId(
     _get_authorId_df = _get_authorId_df.rename(columns={'contentId': 'content'})
 
     # drop authorId from the result_df before join
-    result_df = result_df.drop(['authorId', 'authro'], axis=1, errors='ignore')
+    result_df = result_df.drop(['authorId', 'author'], axis=1, errors='ignore')
 
     result_df = pd.merge(result_df, _get_authorId_df, how='left', on='content')
+    result_df = result_df.rename(columns={'authorId': 'author'})
 
     return result_df
 
