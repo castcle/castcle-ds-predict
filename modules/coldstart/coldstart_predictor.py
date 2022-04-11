@@ -186,6 +186,9 @@ def cold_start_by_counytry_scroing( mongo_client,
 
         # join authorId in result
         result = _add_contentId(mongo_client=mongo_client, result_df=result)
+
+        print('----------------------------------------------------')
+        print(result)
         
      # update collection
     result.reset_index(inplace=False)
