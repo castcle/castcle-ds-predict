@@ -8,13 +8,18 @@
 
 import pandas as pd
 
-def _add_contentId(
+def _add_fields(
     mongo_client, 
     result_df: pd.DataFrame) -> pd.DataFrame:
     '''
-    Add authorId in collection guestfeeditems
+    @title add fields to result (app-db.guestfeeditems)
+        Add authorId in collection guestfeeditems
+        Add originalContent = originalPost._id
+        Add originalAuthor = originalPost.author.id
     '''
+    import numpy as np
 
+    # Add authorId -> author
     _project = {
         'contentId': 1, 
         'authorId': 1
@@ -36,6 +41,33 @@ def _add_contentId(
     result_df = pd.merge(result_df, _get_authorId_df, how='left', on='content')
     result_df = result_df.rename(columns={'authorId': 'author'})
 
+    # Add originalPost
+    _aggreate = [
+        {
+            '$match': {
+                'originalPost': {
+                    '$exists': True
+                }
+            }
+        }, {
+            '$project': {
+                'content': '$_id', 
+                'originalContent': '$originalPost._id', 
+                'originalAuthor': '$originalPost.author.id'
+            }
+        }
+    ]
+    _get_original_post_df = pd.DataFrame(list(
+        mongo_client['app-db']['contents'].aggregate(_aggreate)
+        ))
+    _get_original_post_df = _get_original_post_df.drop(['_id'], axis=1, errors='ignore')
+    # drop authorId from the result_df before join
+    result_df = result_df.drop(['originalContent', 'originalAuthor'], axis=1, errors='ignore')
+    result_df = pd.merge(result_df, _get_original_post_df, how='left', on='content')
+
+    # clean NaN -> None
+    result_df = result_df.replace({np.nan: None})
+
     return result_df
 
 def cold_start_by_counytry_scroing( mongo_client,
@@ -47,7 +79,6 @@ def cold_start_by_counytry_scroing( mongo_client,
                                     ):
     
 
-    import pandas as pd
     import pickle
     from datetime import datetime
     from pprint import pprint
@@ -185,7 +216,7 @@ def cold_start_by_counytry_scroing( mongo_client,
         result = result.append(content_score)
 
         # join authorId in result
-        result = _add_contentId(mongo_client=mongo_client, result_df=result)
+        result = _add_fields(mongo_client=mongo_client, result_df=result)
         
      # update collection
     result.reset_index(inplace=False)
