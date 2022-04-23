@@ -210,6 +210,7 @@ def cold_start_by_counytry_scroing( mongo_client,
         
         #set limit
         content_score = content_score.sort_values(by='score', ascending=False)
+        pprint("content_score.shape: " , content_score.shape)
         content_score = content_score.iloc[:2000,]
         
         # append result
