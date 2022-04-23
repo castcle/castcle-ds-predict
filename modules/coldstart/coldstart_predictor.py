@@ -6,15 +6,79 @@
 # 4. model prediction
 # 5. construct result schemas
 
-def cold_start_by_counytry_scroing( client,
+import pandas as pd
+
+def _add_fields(
+    mongo_client, 
+    result_df: pd.DataFrame) -> pd.DataFrame:
+    '''
+    @title add fields to result (app-db.guestfeeditems)
+        Add authorId in collection guestfeeditems
+        Add originalContent = originalPost._id
+        Add originalAuthor = originalPost.author.id
+    '''
+    import numpy as np
+
+    # Add authorId -> author
+    _project = {
+        'contentId': 1, 
+        'authorId': 1
+    }
+
+    _get_authorId_df = pd.DataFrame(list(
+        mongo_client['analytics-db']['contentStats'].find(
+            {}, _project
+            )
+        )
+    )
+
+    _get_authorId_df = _get_authorId_df.drop(['_id'], axis=1, errors='ignore')
+    _get_authorId_df = _get_authorId_df.rename(columns={'contentId': 'content'})
+
+    # drop authorId from the result_df before join
+    result_df = result_df.drop(['authorId', 'author'], axis=1, errors='ignore')
+
+    result_df = pd.merge(result_df, _get_authorId_df, how='left', on='content')
+    result_df = result_df.rename(columns={'authorId': 'author'})
+
+    # Add originalPost
+    _aggreate = [
+        {
+            '$match': {
+                'originalPost': {
+                    '$exists': True
+                }
+            }
+        }, {
+            '$project': {
+                'content': '$_id', 
+                'originalContent': '$originalPost._id', 
+                'originalAuthor': '$originalPost.author.id'
+            }
+        }
+    ]
+    _get_original_post_df = pd.DataFrame(list(
+        mongo_client['app-db']['contents'].aggregate(_aggreate)
+        ))
+    _get_original_post_df = _get_original_post_df.drop(['_id'], axis=1, errors='ignore')
+    # drop authorId from the result_df before join
+    result_df = result_df.drop(['originalContent', 'originalAuthor'], axis=1, errors='ignore')
+    result_df = pd.merge(result_df, _get_original_post_df, how='left', on='content')
+
+    # clean NaN -> None
+    result_df = result_df.replace({np.nan: None})
+
+    return result_df
+
+def cold_start_by_counytry_scroing( mongo_client,
+                                    updatedAtThreshold,
                                     saved_model = 'mlArtifacts_country',
                                     saved_data = 'guestfeeditems',
                                     saved_data_temp = 'guestfeeditemstemps',
-                                    model_name = 'xgboost',
-                                    updatedAtThreshold = 7.0):
+                                    model_name = 'xgboost'
+                                    ):
     
 
-    import pandas as pd
     import pickle
     from datetime import datetime
     from pprint import pprint
@@ -22,11 +86,11 @@ def cold_start_by_counytry_scroing( client,
     import pymongo
 
     # connect to database
-    appDb = client['app-db']
-    analyticsDb = client['analytics-db']
+    appDb = mongo_client['app-db']
+    analyticsDb = mongo_client['analytics-db']
 
     # define feature preparation function from content id list
-    def prepare_features(client, 
+    def prepare_features(mongo_client, 
                      analytics_db: str,
                      content_stats_collection: str,
                      creator_stats_collection: str,
@@ -72,18 +136,17 @@ def cold_start_by_counytry_scroing( client,
                     'creatorQuotedCount': '$creatorStats.creatorQuotedCount',
                     'ageScore': '$aggregator.ageScore',
                     'updatedAt': 1
-
                 }
             }
         ]
     # assign result to dataframe
     # alias 'contentFeatures'
 
-        content_features = pd.DataFrame(list(client[analytics_db][content_stats_collection].aggregate(contentFeaturesCursor))).rename({'_id':'contentId'},axis = 1)
+        content_features = pd.DataFrame(list(mongo_client[analytics_db][content_stats_collection].aggregate(contentFeaturesCursor))).rename({'_id':'contentId'},axis = 1)
     
         return content_features
 
-    contentFeatures = prepare_features(client = client, # default
+    contentFeatures = prepare_features(mongo_client = mongo_client, # default
                                         analytics_db = 'analytics-db',
                                         content_stats_collection = 'contentStats',
                                         creator_stats_collection = 'creatorStats',
@@ -147,11 +210,14 @@ def cold_start_by_counytry_scroing( client,
         
         #set limit
         content_score = content_score.sort_values(by='score', ascending=False)
+        print("content_score.shape: " , content_score.shape)
         content_score = content_score.iloc[:2000,]
         
         # append result
-        result = result.append(content_score)  
+        result = result.append(content_score)
 
+        # join authorId in result
+        result = _add_fields(mongo_client=mongo_client, result_df=result)
         
      # update collection
     result.reset_index(inplace=False)
@@ -169,16 +235,13 @@ def cold_start_by_counytry_scroing( client,
     saved_data_country.create_index([("countryCode", pymongo.DESCENDING)])
     
 def coldstart_score_main(
-        client,
-        updatedAtThreshold=7.0):
+        mongo_client,
+        updatedAtThreshold) -> None:
     
-    cold_start_by_counytry_scroing( client,
+    cold_start_by_counytry_scroing( mongo_client,
+                                    updatedAtThreshold = updatedAtThreshold,
                                     saved_model = 'mlArtifacts_country',
                                     saved_data = 'guestfeeditems',
                                     saved_data_temp = 'guestfeeditemstemp',
-                                    model_name = 'xgboost',
-                                    updatedAtThreshold = updatedAtThreshold)
-    
-
-    
+                                    model_name = 'xgboost')
     return
