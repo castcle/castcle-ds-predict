@@ -16,8 +16,8 @@ def handle(event, context):
 
     # call modules main function    
     coldstart_score_main(
-        client=mongo_client,
-        updatedAtThreshold=7.0)
+        mongo_client=mongo_client,
+        updatedAtThreshold=30.0)
     
     print('prediction of coldstart: ',' completed')
 
