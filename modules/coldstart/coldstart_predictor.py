@@ -142,8 +142,19 @@ def cold_start_by_counytry_scroing( mongo_client,
     # assign result to dataframe
     # alias 'contentFeatures'
 
-        content_features = pd.DataFrame(list(mongo_client[analytics_db][content_stats_collection].aggregate(contentFeaturesCursor))).rename({'_id':'contentId'},axis = 1)
-    
+        #content_features = pd.DataFrame(list(mongo_client[analytics_db][content_stats_collection].aggregate(contentFeaturesCursor))).rename({'_id':'contentId'},axis = 1)
+        
+        # create dummy table
+        features_name = ['updatedAt', 'contentId', 'likeCount', 'photoCount', 'characterLength', 'ageScore', 'commentCount', 'recastCount', 'quoteCount', 'creatorContentCount', 'creatorLikedCount', 'creatorCommentedCount', 'creatorRecastedCount', 'creatorQuotedCount']
+        content_features = pd.DataFrame({},columns = features_name)
+
+        # query feature
+        mycol_contentStats = client['analytics-db']['contentStats']
+        query_contentStats = list(mycol_contentStats.aggregate(contentFeaturesCursor))
+
+        # merge result with dummy table
+        query_contentStats_df = pd.concat([content_features, pd.DataFrame(query_contentStats).rename({'_id':'contentId'},axis = 1)]).fillna(0) # null -> 0
+        print('query_contentStats_df', query_contentStats_df.head())
         return content_features
 
     contentFeatures = prepare_features(mongo_client = mongo_client, # default
