@@ -204,7 +204,11 @@ def cold_start_by_counytry_scroing( mongo_client,
         contentFeatures_for_scoring = contentFeatures.drop(['origin'], axis=1)
         
         # scoring process
-        score = pd.DataFrame(model_load.predict(contentFeatures_for_scoring.drop(['contentId'], axis = 1)), columns = ['score'])
+        contentFeatures_for_pred = contentFeatures_for_scoring.drop(['contentId'], axis = 1)
+        model_predict_content = model_load.predict(contentFeatures_for_pred)
+        print('contentFeatures_for_pred', contentFeatures_for_pred)
+        print('model_predict_content', model_predict_content)
+        score = pd.DataFrame(model_predict_content, columns = ['score'])
         
         # set up schema
         content_list = contentFeatures[['contentId']].reset_index(drop = True)
