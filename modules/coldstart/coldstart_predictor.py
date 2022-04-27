@@ -280,12 +280,15 @@ def cold_start_by_counytry_scroing( mongo_client,
         list_contentId = content_score_add_decay_function['content'].tolist()
         print('contentId: ', list_contentId)
         
-        junk_score_df = query_content_junkscore(list_contentId).rename(columns={'content_id': 'contentId'})  #! Fixme
+        junk_score_df = query_content_junkscore(list_contentId).rename(columns={'content_id': 'content'})  #! Fixme
         print('junk_score_df', junk_score_df)
         print('content_score_add_decay_function', content_score_add_decay_function.columns.tolist())
+        
+        content_score_add_decay_function = content_score_add_decay_function.merge(junk_score_df, on = 'content', how = 'left')
+        print('result_junk', content_score_add_decay_function['junkscore'])
             
         content_score_add_decay_function['time_decay'] = 1/((content_score_add_decay_function['createdAt']-content_score_add_decay_function['origin']).dt.total_seconds()/3600)
-        content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']
+        content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']*content_score_add_decay_function['junkscore']
         content_score = content_score_add_decay_function[['content','score','countryCode','type','updatedAt','createdAt']]
         
         #set limit
