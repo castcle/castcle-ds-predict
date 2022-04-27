@@ -7,6 +7,62 @@
 # 5. construct result schemas
 
 import pandas as pd
+#----------------------------------------------------------------------------------------------------------------
+#! Fixme
+def retrive_junk_score(testcase):
+    """
+    query content junk score from testcase
+    """
+    from mongo_client import mongo_client as client
+    mycol_contentfiltering = client['analytics-db']['contentfiltering'] #! Fixme
+    # retrive content in contentfiltering
+    query_data_content = list(mycol_contentfiltering.aggregate([
+                                         {'$match': {'contentId': {'$in':testcase}}}
+                                                             ,{'$project': {'_id' : 1 ,'contentId':1,'junkOutput':1}}]))
+    print('all = ', len(testcase),'-> havescore = ', len(query_data_content))
+    return query_data_content
+
+def query_content_junkscore(test_case):
+    """
+    Main junk feature
+    Retrive junkscore and then recalulate if can't find
+    """
+    #! Fixme
+    def extract_score(x):
+        return x['score']
+
+    import time
+    import pandas as pd
+    from bson.objectid import ObjectId
+    # find junk score
+    start_time = time.time()
+    query_data_content = retrive_junk_score(test_case)
+
+    # create dummy table
+    junkcol_name = ['_id', 'contentId', 'junkOutput']
+    junkcol_df = pd.DataFrame({},columns = junkcol_name)
+
+    # merge result with dummy table
+    contentfiltering_df = pd.concat([junkcol_df, pd.DataFrame(query_data_content)])
+    contentfiltering_df = contentfiltering_df.drop('_id', axis=1)
+    contentfiltering_df = contentfiltering_df.rename({'contentId':'content_id','junkOutput':'junkscore'},axis = 1).fillna(0) # null -> 0
+    contentfiltering_df['junkscore'] = contentfiltering_df['junkscore'].apply(extract_score) # Call extract_score(.apply function)
+    print(" retrieve junk score --- %s seconds ---" % (time.time() - start_time))
+
+    #find not have score
+    contentid_no_junk_score = list(set(test_case) - set(contentfiltering_df['content_id'].tolist()))
+    result = contentfiltering_df.copy() #return contentfiltering_df if all contents have junk score
+    print('len no junk = ',len(contentid_no_junk_score))
+
+    # junk score = 0 if not have
+    if contentid_no_junk_score != []:
+        #recalculate_junkscore = calculate_junk_score(contentid_no_junk_score)
+        recalculate_junkscore = pd.DataFrame(contentid_no_junk_score).rename(columns = {0:'content_id'})
+        recalculate_junkscore['junkscore'] = 0.01
+        result = pd.concat([contentfiltering_df, recalculate_junkscore], axis=0)
+    print(" recalulate -> df_junkscore --- %s seconds ---" % (time.time() - start_time))
+    return result
+#----------------------------------------------------------------------------------------------------------------
 
 def _add_fields(
     mongo_client, 
@@ -221,8 +277,13 @@ def cold_start_by_counytry_scroing( mongo_client,
         
         # add decay function 
         content_score_add_decay_function = content_score.merge(contentFeatures[['contentId','origin']],right_on = 'contentId', left_on = 'content', how = 'inner')
-        print('result: ', content_score_add_decay_function.columns.tolist())
-        print('result: ', content_score_add_decay_function['content'].tolist())
+        list_contentId = content_score_add_decay_function['content'].tolist()
+        print('contentId: ', list_contentId)
+        
+        junk_score_df = query_content_junkscore(list_contentId).rename(columns={'content_id': 'contentId'})  #! Fixme
+        print('junk_score_df', junk_score_df)
+        print('content_score_add_decay_function', content_score_add_decay_function.columns.tolist())
+            
         content_score_add_decay_function['time_decay'] = 1/((content_score_add_decay_function['createdAt']-content_score_add_decay_function['origin']).dt.total_seconds()/3600)
         content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']
         content_score = content_score_add_decay_function[['content','score','countryCode','type','updatedAt','createdAt']]
