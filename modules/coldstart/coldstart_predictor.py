@@ -58,7 +58,7 @@ def query_content_junkscore(test_case):
     if contentid_no_junk_score != []:
         #recalculate_junkscore = calculate_junk_score(contentid_no_junk_score)
         recalculate_junkscore = pd.DataFrame(contentid_no_junk_score).rename(columns = {0:'content_id'})
-        recalculate_junkscore['junkscore'] = 0.01
+        recalculate_junkscore['junkscore'] = 0.00
         result = pd.concat([contentfiltering_df, recalculate_junkscore], axis=0)
     print(" recalulate -> df_junkscore --- %s seconds ---" % (time.time() - start_time))
     return result
@@ -281,15 +281,16 @@ def cold_start_by_counytry_scroing( mongo_client,
         print('contentId: ', list_contentId)
         
         junk_score_df = query_content_junkscore(list_contentId).rename(columns={'content_id': 'content'})  #! Fixme
-        print('junk_score_df', junk_score_df)
-        print('content_score_add_decay_function', content_score_add_decay_function.columns.tolist())
         
         content_score_add_decay_function = content_score_add_decay_function.merge(junk_score_df, on = 'content', how = 'left')
-        print('result_junk', content_score_add_decay_function['junkscore'])
+        content_score_add_decay_function['junkscore'] = content_score_add_decay_function['junkscore'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
+        print('result_junk', content_score_add_decay_function['junkscore'].tolist())
+        print('result_column', content_score_add_decay_function.columns.tolist())
             
         content_score_add_decay_function['time_decay'] = 1/((content_score_add_decay_function['createdAt']-content_score_add_decay_function['origin']).dt.total_seconds()/3600)
         content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']*content_score_add_decay_function['junkscore']
         content_score = content_score_add_decay_function[['content','score','countryCode','type','updatedAt','createdAt']]
+        print('content_score_add_decay_function', content_score_add_decay_function)
         
         #set limit
         content_score = content_score.sort_values(by='score', ascending=False)
