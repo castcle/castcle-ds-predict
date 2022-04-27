@@ -207,9 +207,8 @@ def cold_start_by_counytry_scroing( mongo_client,
         # scoring process
         contentFeatures_for_pred = contentFeatures_for_scoring.drop(['contentId'], axis = 1)
         model_predict_content = model_load.predict(contentFeatures_for_pred)
-        print('contentFeatures_for_pred', contentFeatures_for_pred)
-        print('model_predict_content', model_predict_content)
         score = pd.DataFrame(model_predict_content, columns = ['score'])
+        print('score', score)
         
         # set up schema
         content_list = contentFeatures[['contentId']].reset_index(drop = True)
@@ -222,6 +221,7 @@ def cold_start_by_counytry_scroing( mongo_client,
         
         # add decay function 
         content_score_add_decay_function = content_score.merge(contentFeatures[['contentId','origin']],right_on = 'contentId', left_on = 'content', how = 'inner')
+        print('result: ', content_score_add_decay_function['contentId].tolist())
         content_score_add_decay_function['time_decay'] = 1/((content_score_add_decay_function['createdAt']-content_score_add_decay_function['origin']).dt.total_seconds()/3600)
         content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']
         content_score = content_score_add_decay_function[['content','score','countryCode','type','updatedAt','createdAt']]
