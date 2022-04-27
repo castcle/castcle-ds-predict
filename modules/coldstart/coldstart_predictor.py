@@ -211,7 +211,7 @@ def cold_start_by_counytry_scroing( mongo_client,
 
         # merge result with dummy table
         query_contentStats_df = pd.concat([content_features, pd.DataFrame(query_contentStats).rename({'_id':'contentId'},axis = 1)]).fillna(0) # null -> 0
-        print('query_contentStats_df', query_contentStats_df.head())
+        #print('query_contentStats_df', query_contentStats_df.head())
  
         return query_contentStats_df
 
@@ -257,14 +257,12 @@ def cold_start_by_counytry_scroing( mongo_client,
                                      account= countryId,
                                      model_name= model_name)
         
-        print('contentFeatures', contentFeatures)
         contentFeatures_for_scoring = contentFeatures.drop(['origin'], axis=1)
         
         # scoring process
         contentFeatures_for_pred = contentFeatures_for_scoring.drop(['contentId'], axis = 1)
         model_predict_content = model_load.predict(contentFeatures_for_pred)
         score = pd.DataFrame(model_predict_content, columns = ['score'])
-        print('score', score)
         
         # set up schema
         content_list = contentFeatures[['contentId']].reset_index(drop = True)
@@ -280,17 +278,18 @@ def cold_start_by_counytry_scroing( mongo_client,
         list_contentId = content_score_add_decay_function['content'].tolist()
         print('contentId: ', list_contentId)
         
+        # Retreive junk scoring
         junk_score_df = query_content_junkscore(list_contentId).rename(columns={'content_id': 'content'})  #! Fixme
-        
         content_score_add_decay_function = content_score_add_decay_function.merge(junk_score_df, on = 'content', how = 'left')
         content_score_add_decay_function['junkscore'] = content_score_add_decay_function['junkscore'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
-        print('result_junk', content_score_add_decay_function['junkscore'].tolist())
-        print('result_column', content_score_add_decay_function.columns.tolist())
+        #print('result_junk', content_score_add_decay_function['junkscore'].tolist())
+        #print('result_column', content_score_add_decay_function.columns.tolist())
             
+        # Personalize scoring
         content_score_add_decay_function['time_decay'] = 1/((content_score_add_decay_function['createdAt']-content_score_add_decay_function['origin']).dt.total_seconds()/3600)
         content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']*content_score_add_decay_function['junkscore']
         content_score = content_score_add_decay_function[['content','score','countryCode','type','updatedAt','createdAt']]
-        print('content_score_add_decay_function', content_score_add_decay_function)
+        print('result: ', content_score_add_decay_function)
         
         #set limit
         content_score = content_score.sort_values(by='score', ascending=False)
