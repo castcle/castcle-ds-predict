@@ -157,7 +157,7 @@ def cold_start_by_counytry_scroing( mongo_client,
         query_contentStats_df = pd.concat([content_features, pd.DataFrame(query_contentStats).rename({'_id':'contentId'},axis = 1)]).fillna(0) # null -> 0
         print('query_contentStats_df', query_contentStats_df.head())
  
-        return content_features
+        return query_contentStats_df
 
     contentFeatures = prepare_features(mongo_client = mongo_client, # default
                                         analytics_db = 'analytics-db',
