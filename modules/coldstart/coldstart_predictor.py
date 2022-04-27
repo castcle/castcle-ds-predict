@@ -200,7 +200,8 @@ def cold_start_by_counytry_scroing( mongo_client,
         model_load = load_model_from_mongodb(collection=mlArtifacts_country,
                                      account= countryId,
                                      model_name= model_name)
-
+        
+        print('contentFeatures', contentFeatures)
         contentFeatures_for_scoring = contentFeatures.drop(['origin'], axis=1)
         
         # scoring process
