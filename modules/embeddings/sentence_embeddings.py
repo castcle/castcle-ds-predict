@@ -32,9 +32,6 @@ def clean_text(txt_):
     txt_ = re.sub(detect_doublespace, ' ', txt_).strip()
     return txt_
 
-def extract_message(x):
-    x = clean_text(x)
-    return x
 
 def sentence_encoding(message_):
     """
@@ -64,6 +61,10 @@ def embeddings_sentence(duration):
     '''
     write sentence_embeddings to mongodb
     '''
+    def extract_message(x):
+    x = clean_text(x)
+    return x
+
     import pandas as pd
     from datetime import datetime
 
@@ -85,6 +86,7 @@ def embeddings_sentence(duration):
     
     print('duration', duration)
     message_content = pd.DataFrame(query_data_content)
+    print(message_content.head)
     list_of_message = list(set(message_content['massageInEN'].apply(extract_message).tolist()))
     print('list_of_message', len(list_of_message))
 
