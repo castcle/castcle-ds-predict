@@ -11,12 +11,10 @@ def handle(event, context):
 
     print(json.dumps(event, indent=4))
     
-    from modules.embeddings.sentence_embeddings \
-        import embeddings_sentence
+    from modules.embeddings.sentence_embeddings import embeddings_sentence
 
     # call modules main function  
-    duration = 1  
-    embeddings_sentence(duration)
+    embeddings_sentence(duration = 1)
     
     print('embeddings_sentents: ',' completed')
 
