@@ -92,7 +92,7 @@ def embeddings_sentence(duration):
     message_content = pd.DataFrame(query_data_content)
     print(message_content.head)
     
-    if message_content != []:
+    if 'massageInEN' in message_content:
         list_of_message = list(set(message_content['massageInEN'].apply(extract_message).tolist()))
         print('list_of_message', len(list_of_message))
 
