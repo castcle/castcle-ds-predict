@@ -83,32 +83,40 @@ def embeddings_sentence(duration):
         # query data
         duration = 100
         query_data_content = query_1min_content(duration)
-    
+        if query_data_content == []:
+            # query data
+            duration = 10000
+            query_data_content = query_1min_content(duration)
+            
     print('duration', duration)
     message_content = pd.DataFrame(query_data_content)
     print(message_content.head)
-    list_of_message = list(set(message_content['massageInEN'].apply(extract_message).tolist()))
-    print('list_of_message', len(list_of_message))
+    
+    if message_content != []:
+        list_of_message = list(set(message_content['massageInEN'].apply(extract_message).tolist()))
+        print('list_of_message', len(list_of_message))
 
-    # sentence_encoding
-    sentence_embedd = sentence_encoding(list_of_message).tolist()
-    print('compare_embeddings', len(sentence_embedd))
+        # sentence_encoding
+        sentence_embedd = sentence_encoding(list_of_message).tolist()
+        print('compare_embeddings', len(sentence_embedd))
 
-    # write to mongo
-    writeCol = client['analytics-db']['sentence_embeddings']
-    try: # create if not exists
-        # drop collection
-        writeCol.drop()
-        client['analytics-db'].create_collection('sentence_embeddings')
-    except Exception  as e:  # if error 
-        print(e)
-        pass
-    try: # try to write
-        write_mongo_df = {}
-        write_mongo_df['sentence_embeddings'] = sentence_embedd
-        write_mongo_df['updatedAt'] = datetime.utcnow()
-        writeCol.insert_one(write_mongo_df)
-        print('write done')
-    except Exception  as e:  # if error  
-        print(e)
+        # write to mongo
+        writeCol = client['analytics-db']['sentence_embeddings']
+        try: # create if not exists
+            # drop collection
+            writeCol.drop()
+            client['analytics-db'].create_collection('sentence_embeddings')
+        except Exception  as e:  # if error 
+            print(e)
+            pass
+        try: # try to write
+            write_mongo_df = {}
+            write_mongo_df['sentence_embeddings'] = sentence_embedd
+            write_mongo_df['updatedAt'] = datetime.utcnow()
+            writeCol.insert_one(write_mongo_df)
+            print('write done')
+        except Exception  as e:  # if error  
+            print(e)
+            pass
+    else:
         pass
