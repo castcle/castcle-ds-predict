@@ -62,8 +62,8 @@ def embeddings_sentence(duration):
     write sentence_embeddings to mongodb
     '''
     def extract_message(x):
-    x = clean_text(x)
-    return x
+        x = clean_text(x)
+        return x
 
     import pandas as pd
     from datetime import datetime
