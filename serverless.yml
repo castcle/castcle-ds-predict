@@ -115,7 +115,7 @@ functions:
     events:
       - schedule: cron(*/30 * * * ? *)
   
-  coldStartPredictor:
+  sentenceEmbedding:
     name: ${self:provider.stage}-ds-predict-sentence-embedding
     memorySize: 2048
     warmup:
