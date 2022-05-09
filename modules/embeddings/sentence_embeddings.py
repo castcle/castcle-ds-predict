@@ -33,12 +33,11 @@ def clean_text(txt_):
     return txt_
 
 
-def sentence_encoding(message_):
+def sentence_encoding(message_, model):
     """
     Call sentence encoding model
     """
     from sentence_transformers import SentenceTransformer
-    model = SentenceTransformer('all-MiniLM-L6-v2')
     embeddings = model.encode(message_, convert_to_tensor=True)
     return embeddings
 
@@ -57,11 +56,15 @@ def query_1min_content(duration):
                                                                 ])) 
     return query_data_content
 
-def embeddings_sentence(duration):
-    '''
+def embeddings_sentence(duration, model):
+    """
     write sentence_embeddings to mongodb
-    '''
+    """
+    
     def extract_message(x):
+        """
+        Call clean text function
+        """
         x = clean_text(x)
         return x
 
@@ -71,7 +74,7 @@ def embeddings_sentence(duration):
     # query data
     query_data_content = query_1min_content(duration)
 
-    # if insufficate content(50) duration = 100 min
+    # if insufficate content(50) recall and change duration time to 100 min
     if query_data_content != []:
         if len(query_data_content) <= 50:
             # query data
@@ -97,7 +100,7 @@ def embeddings_sentence(duration):
         print('list_of_message', len(list_of_message))
 
         # sentence_encoding
-        sentence_embedd = sentence_encoding(list_of_message).tolist()
+        sentence_embedd = sentence_encoding(list_of_message, model).tolist()
         print('compare_embeddings', len(sentence_embedd))
 
         # write to mongo
