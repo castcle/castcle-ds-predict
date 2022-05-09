@@ -10,3 +10,4 @@ google-cloud-language==2.3.0
 googleapis-common-protos==1.53.0
 networkx==2.5.0
 sentence-transformers
+boto3
