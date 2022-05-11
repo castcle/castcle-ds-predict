@@ -29,8 +29,9 @@ def query_content_junkscore(test_case):
     """
     #! Fixme
     def extract_score(x):
-        if 'junkscore' in x:
-            return x['junkscore']
+        #2 62454ea1becd94109a8a229d {'class': 'junk', 'score': 0.0}
+        if 'score' in x:
+            return x['score']
         else:
             return 0.5
 
