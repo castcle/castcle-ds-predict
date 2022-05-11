@@ -29,7 +29,10 @@ def query_content_junkscore(test_case):
     """
     #! Fixme
     def extract_score(x):
-        return x['score']
+        if 'junkscore' in x:
+            return x['junkscore']
+        else:
+            return 0.5
 
     import time
     import pandas as pd
@@ -46,6 +49,7 @@ def query_content_junkscore(test_case):
     contentfiltering_df = pd.concat([junkcol_df, pd.DataFrame(query_data_content)])
     contentfiltering_df = contentfiltering_df.drop('_id', axis=1)
     contentfiltering_df = contentfiltering_df.rename({'contentId':'content_id','junkOutput':'junkscore'},axis = 1).fillna(0) # null -> 0
+    print('contentfiltering_df', contentfiltering_df.head())
     contentfiltering_df['junkscore'] = contentfiltering_df['junkscore'].apply(extract_score) # Call extract_score(.apply function)
     print(" retrieve junk score --- %s seconds ---" % (time.time() - start_time))
 
