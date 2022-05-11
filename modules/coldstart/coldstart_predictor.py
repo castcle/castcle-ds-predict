@@ -30,9 +30,12 @@ def query_content_junkscore(test_case):
     #! Fixme
     def extract_score(x):
         #2 62454ea1becd94109a8a229d {'class': 'junk', 'score': 0.0}
-        if 'score' in x:
-            return x['score']
-        else:
+        try:
+            if 'score' in x:
+                return x['score']
+            else:
+                return 0.5 #! Fixme
+        except:
             return 0.5 #! Fixme
 
     import time
