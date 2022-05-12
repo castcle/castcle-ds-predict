@@ -114,3 +114,16 @@ functions:
         - coldstart_predictor.handle
     events:
       - schedule: cron(*/30 * * * ? *)
+  
+  sentenceEmbedding:
+    name: ${self:provider.stage}-ds-predict-sentence-embedding
+    memorySize: 2048
+    warmup:
+      default:
+        enabled: false
+    image:
+      name: app_image
+      command:
+        - sentence_embedding.handle
+    events:
+      - schedule: cron(*/30 * * * ? *)
