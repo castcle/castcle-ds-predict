@@ -308,12 +308,14 @@ def cold_start_by_counytry_scroing( mongo_client,
         #set limit
         content_score = content_score.sort_values(by='score', ascending=False)
         print("content_score.shape1: " , content_score.shape)
-        content_score = content_score.iloc[:2000,]
+        content_score = content_score.iloc[:2000,] #not reach to 2000 (1008)
         print("content_score.shape2: " , content_score.shape)
+        print("content_score.sample: " , content_score.iloc[:5,])
         
         # append result
         result = result.append(content_score)
         print("len result: " , len(result))
+        print("result.sample: " , result[:5])
 
         # join authorId in result
         result = _add_fields(mongo_client=mongo_client, result_df=result)
