@@ -10,7 +10,8 @@ import pandas as pd
 #----------------------------------------------------------------------------------------------------------------
 def retrive_deleted_contents(list_content):
     """
-    Use not in function to retrieve in content-db
+    input 
+    
     """
     from mongo_client import mongo_client as client
     
@@ -21,16 +22,22 @@ def retrive_deleted_contents(list_content):
     
     list_content = pd.DataFrame(list_content)
     list_content = list_content[0].apply(add_objectID).tolist()
-    print('list_content', list_content[:5])
-    
+    print('len list_content:', len(list_content))
+    #----------------- move to funct -----------------
+    # retrive list content in content-db
     mycol_contents = client['app-db']['contents']
-    # retrive content in contentfiltering
     query_content = list(mycol_contents.aggregate([
-                                           {'$match': {'_id': {'$nin':list_content}}}
+                                           {'$match': {'_id': {'$in':list_content}}}
                                     ,{'$project': {'_id' : 1  }}
                                                                ]))
+    #-------------------------------------------------
     query_content_df = pd.DataFrame(query_content)
-    print('retrive_deleted_contents:', query_content_df.head())
+    list_query_content = query_content_df['_id'].tolist()
+    # deleted list = content that not in content-db
+    deleted_list = list(set(list_content) - set(list_query_content))
+    print('len deleted_list:', len(deleted_list))
+    print('deleted_list:', deleted_list[:5])
+    
     return query_content_df
 
 #! Fixme
@@ -352,8 +359,10 @@ def cold_start_by_counytry_scroing( mongo_client,
     
     list_contents = result['content'].tolist()
     deleted_list = retrive_deleted_contents(list_contents)
-    print('deleted_list:', deleted_list)
-    print('data_dict:', data_dict)
+    
+    #-- remove contentID from result
+    data_dict_df = pd.DataFrame(data_dict)
+    print('data_dict_df', data_dict_df.head())
     
     # save to temporary storage
     saved_data_country_temporary.insert_many(data_dict)
