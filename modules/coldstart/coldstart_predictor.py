@@ -366,7 +366,7 @@ def cold_start_by_counytry_scroing( mongo_client,
     deleted_list = retrive_deleted_contents(list_contents)
     
     # remove deleted list
-    result = result[~result[content].isin(deleted_list)]
+    result = result[~result['content'].isin(deleted_list)]
     print('len remove deleted', len(result))
     
     data_dict = result.to_dict("records")
