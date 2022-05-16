@@ -12,6 +12,7 @@ def retrive_deleted_contents(list_content):
     """
     Use not in function to retrieve in content-db
     """
+    from mongo_client import mongo_client as client
     mycol_contents = client['app-db']['contents']
     # retrive content in contentfiltering
     query_content = list(mycol_contents.aggregate([
