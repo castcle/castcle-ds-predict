@@ -335,7 +335,7 @@ def cold_start_by_counytry_scroing( mongo_client,
         content_score_add_decay_function['time_decay'] = 1/((content_score_add_decay_function['createdAt']-content_score_add_decay_function['origin']).dt.total_seconds()/3600)
         content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']*content_score_add_decay_function['junkscore']*content_score_add_decay_function['textDiversity'] #! Fixme
         content_score = content_score_add_decay_function[['content','score','countryCode','type','updatedAt','createdAt']]
-        print('result: ', content_score_add_decay_function)
+        #print('result: ', content_score_add_decay_function)
         
         #set limit
         content_score = content_score.sort_values(by='score', ascending=False)
@@ -358,7 +358,7 @@ def cold_start_by_counytry_scroing( mongo_client,
     
     #-- remove contentID from result
     #data_dict_df = pd.DataFrame(data_dict) #result
-    print('result', result)
+    print('result', result.head())
     print('len result', len(result))
     
     list_contents = result['content'].tolist()
@@ -368,9 +368,9 @@ def cold_start_by_counytry_scroing( mongo_client,
     # remove deleted list
     result = result[~result['content'].isin(deleted_list)]
     print('len remove deleted', len(result))
+    print('result.columns', result.columns.tolist())
     
     data_dict = result.to_dict("records")
-    print('len data_dict', len(data_dict))
     
     # save to temporary storage
     saved_data_country_temporary.insert_many(data_dict)
