@@ -13,6 +13,16 @@ def retrive_deleted_contents(list_content):
     Use not in function to retrieve in content-db
     """
     from mongo_client import mongo_client as client
+    
+    def add_objectID(x):
+        from bson.objectid import ObjectId
+        x = ObjectId(x)
+        return x
+    
+    list_content = pd.DataFrame(list_content)
+    list_content = list_content[0].apply(add_objectID).tolist()
+    print('list_content', list_content[:5])
+    
     mycol_contents = client['app-db']['contents']
     # retrive content in contentfiltering
     query_content = list(mycol_contents.aggregate([
