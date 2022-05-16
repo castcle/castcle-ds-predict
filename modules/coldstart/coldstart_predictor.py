@@ -38,7 +38,7 @@ def retrive_deleted_contents(list_content):
     print('len deleted_list:', len(deleted_list))
     print('deleted_list:', deleted_list[:5])
     
-    return query_content_df
+    return deleted_list
 
 #! Fixme
 def retrive_junk_score(testcase):
@@ -342,12 +342,12 @@ def cold_start_by_counytry_scroing( mongo_client,
         print("content_score.shape1: " , content_score.shape)
         content_score = content_score.iloc[:2000,] #not reach to 2000 (1008)
         print("content_score.shape2: " , content_score.shape)
-        print("content_score.sample: " , content_score.iloc[:5,])
+        #print("content_score.sample: " , content_score.iloc[:5,])
         
         # append result
         result = result.append(content_score)
         print("len result: " , len(result))
-        print("result.sample: " , result[:5])
+        #print("result.sample: " , result[:5])
 
         # join authorId in result
         result = _add_fields(mongo_client=mongo_client, result_df=result)
@@ -355,14 +355,22 @@ def cold_start_by_counytry_scroing( mongo_client,
      # update collection
     result.reset_index(inplace=False)
     
-    data_dict = result.to_dict("records")
-    
-    list_contents = result['content'].tolist()
-    deleted_list = retrive_deleted_contents(list_contents)
     
     #-- remove contentID from result
-    data_dict_df = pd.DataFrame(data_dict)
-    print('data_dict_df', data_dict_df.head())
+    #data_dict_df = pd.DataFrame(data_dict) #result
+    print('result', result)
+    print('len result', len(result))
+    
+    list_contents = result['content'].tolist()
+    # find deleted
+    deleted_list = retrive_deleted_contents(list_contents)
+    
+    # remove deleted list
+    result = result[~result[content].isin(deleted_list)]
+    print('len remove deleted', len(result))
+    
+    data_dict = result.to_dict("records")
+    print('len data_dict', len(data_dict))
     
     # save to temporary storage
     saved_data_country_temporary.insert_many(data_dict)
