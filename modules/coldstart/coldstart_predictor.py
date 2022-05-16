@@ -8,6 +8,20 @@
 
 import pandas as pd
 #----------------------------------------------------------------------------------------------------------------
+def retrive_deleted_contents(list_content):
+    """
+    Use not in function to retrieve in content-db
+    """
+    mycol_contents = client['app-db']['contents']
+    # retrive content in contentfiltering
+    query_content = list(mycol_contents.aggregate([
+                                           {'$match': {'_id': {'$nin':list_content}}}
+                                    ,{'$project': {'_id' : 1  }}
+                                                               ]))
+    query_content_df = pd.DataFrame(query_content)
+    print('retrive_deleted_contents:', query_content_df.head())
+    return query_content_df
+
 #! Fixme
 def retrive_junk_score(testcase):
     """
@@ -324,6 +338,11 @@ def cold_start_by_counytry_scroing( mongo_client,
     result.reset_index(inplace=False)
     
     data_dict = result.to_dict("records")
+    
+    list_contents = result['content'].tolist()
+    deleted_list = retrive_deleted_contents(list_contents)
+    print('deleted_list:', deleted_list)
+    print('data_dict:', data_dict)
     
     # save to temporary storage
     saved_data_country_temporary.insert_many(data_dict)
