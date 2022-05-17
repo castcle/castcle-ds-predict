@@ -8,6 +8,38 @@
 
 import pandas as pd
 #----------------------------------------------------------------------------------------------------------------
+def retrive_deleted_contents(list_content):
+    """
+    input 
+    
+    """
+    from mongo_client import mongo_client as client
+    
+    def add_objectID(x):
+        from bson.objectid import ObjectId
+        x = ObjectId(x)
+        return x
+    
+    list_content = pd.DataFrame(list_content)
+    list_content = list_content[0].apply(add_objectID).tolist()
+    print('len list_content:', len(list_content))
+    #----------------- move to funct -----------------
+    # retrive list content in content-db
+    mycol_contents = client['app-db']['contents']
+    query_content = list(mycol_contents.aggregate([
+                                           {'$match': {'_id': {'$in':list_content}}}
+                                    ,{'$project': {'_id' : 1  }}
+                                                               ]))
+    #-------------------------------------------------
+    query_content_df = pd.DataFrame(query_content)
+    list_query_content = query_content_df['_id'].tolist()
+    # deleted list = content that not in content-db
+    deleted_list = list(set(list_content) - set(list_query_content))
+    print('len deleted_list:', len(deleted_list))
+    print('deleted_list:', deleted_list[:5])
+    
+    return deleted_list
+
 #! Fixme
 def retrive_junk_score(testcase):
     """
@@ -303,21 +335,40 @@ def cold_start_by_counytry_scroing( mongo_client,
         content_score_add_decay_function['time_decay'] = 1/((content_score_add_decay_function['createdAt']-content_score_add_decay_function['origin']).dt.total_seconds()/3600)
         content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']*content_score_add_decay_function['junkscore']*content_score_add_decay_function['textDiversity'] #! Fixme
         content_score = content_score_add_decay_function[['content','score','countryCode','type','updatedAt','createdAt']]
-        print('result: ', content_score_add_decay_function)
+        #print('result: ', content_score_add_decay_function)
         
         #set limit
         content_score = content_score.sort_values(by='score', ascending=False)
-        print("content_score.shape: " , content_score.shape)
-        content_score = content_score.iloc[:2000,]
+        print("content_score.shape1: " , content_score.shape)
+        content_score = content_score.iloc[:2000,] #not reach to 2000 (1008)
+        print("content_score.shape2: " , content_score.shape)
+        #print("content_score.sample: " , content_score.iloc[:5,])
         
         # append result
         result = result.append(content_score)
+        print("len result: " , len(result))
+        #print("result.sample: " , result[:5])
 
         # join authorId in result
         result = _add_fields(mongo_client=mongo_client, result_df=result)
         
      # update collection
     result.reset_index(inplace=False)
+    
+    
+    #-- remove contentID from result
+    #data_dict_df = pd.DataFrame(data_dict) #result
+    print('result', result.head())
+    print('len result', len(result))
+    
+    list_contents = result['content'].tolist()
+    # find deleted
+    deleted_list = retrive_deleted_contents(list_contents)
+    
+    # remove deleted list
+    result = result[~result['content'].isin(deleted_list)]
+    print('len remove deleted', len(result))
+    print('result.columns', result.columns.tolist())
     
     data_dict = result.to_dict("records")
     
