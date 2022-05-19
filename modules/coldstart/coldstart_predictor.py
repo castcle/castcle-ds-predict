@@ -66,7 +66,7 @@ def query_content_junkscore(test_case):
             return x['score']
         else:
             print("cant find x['score']")
-            return 0.5
+            return 0.1
 
     import time
     import pandas as pd
@@ -85,7 +85,7 @@ def query_content_junkscore(test_case):
     contentfiltering_df = contentfiltering_df.rename({'contentId':'content_id','junkOutput':'junkscore'},axis = 1)
     print('contentfiltering_df', contentfiltering_df.head())
     contentfiltering_df['junkscore'] = contentfiltering_df['junkscore'].fillna(0).apply(extract_score) # Call extract_score(.apply function)
-    contentfiltering_df['textDiversity'] = contentfiltering_df['textDiversity'].fillna(0.5) #add diversity
+    contentfiltering_df['textDiversity'] = contentfiltering_df['textDiversity'].fillna(0.1) #add diversity
     print(" retrieve junk score --- %s seconds ---" % (time.time() - start_time))
     
     #find not have score
@@ -101,8 +101,8 @@ def query_content_junkscore(test_case):
 
     df_null = pd.DataFrame(contentid_no_junk_score).rename({0:'content_id'},axis = 1)
     result = pd.concat([result, df_null])
-    result['junkscore'] = result['junkscore'].fillna(0.5)
-    result['textDiversity'] = result['textDiversity'].fillna(0.5)
+    result['junkscore'] = result['junkscore'].fillna(0.1)
+    result['textDiversity'] = result['textDiversity'].fillna(0.1)
     
     print(" recalulate -> df_junkscore --- %s seconds ---" % (time.time() - start_time))
     return result
