@@ -1,395 +1,432 @@
-
-# main function of personalize content model prediction
-# 1. get input
-# 2. loading model
-# 3. feature preparation
-# 4. model prediction
-# 5. construct result schemas
-
+'''
+main function of personalize content model prediction
+1. check database
+2. get input
+3. loading model
+4. feature preparation
+5. model prediction
+6. construct result schemas
+'''
+import pickle
+from bson import ObjectId
+from datetime import datetime, timedelta
 import pandas as pd
-#----------------------------------------------------------------------------------------------------------------
-def retrive_deleted_contents(list_content):
-    """
-    input 
+import xgboost as xgb
+
+# define existence of mlAritact of user function
+def account_artifact_checker(mongo_client,
+                             src_database_name: str,
+                             src_collection_name: str, 
+                             account_id):
     
-    """
-    from mongo_client import mongo_client as client
-    
-    def add_objectID(x):
-        from bson.objectid import ObjectId
-        x = ObjectId(x)
-        return x
-    
-    list_content = pd.DataFrame(list_content)
-    list_content = list_content[0].apply(add_objectID).tolist()
-    print('len list_content:', len(list_content))
-    #----------------- move to funct -----------------
-    # retrive list content in content-db
-    mycol_contents = client['app-db']['contents']
-    query_content = list(mycol_contents.aggregate([
-                                           {'$match': {'_id': {'$in':list_content}}}
-                                    ,{'$project': {'_id' : 1  }}
-                                                               ]))
-    #-------------------------------------------------
-    query_content_df = pd.DataFrame(query_content)
-    list_query_content = query_content_df['_id'].tolist()
-    # deleted list = content that not in content-db
-    deleted_list = list(set(list_content) - set(list_query_content))
-    print('len deleted_list:', len(deleted_list))
-    print('deleted_list:', deleted_list[:5])
-    
-    return deleted_list
-
-#! Fixme
-def retrive_junk_score(testcase):
-    """
-    query content junk score from testcase
-    """
-    from mongo_client import mongo_client as client
-    mycol_contentfiltering = client['analytics-db']['contentfiltering'] #! Fixme
-    # retrive content in contentfiltering
-    query_data_content = list(mycol_contentfiltering.aggregate([
-                                         {'$match': {'contentId': {'$in':testcase}}}
-                                                             ,{'$project': {'_id' : 1 ,'contentId':1,'junkOutput':1,'textDiversity':1}}]))
-    print('all = ', len(testcase),'-> havescore = ', len(query_data_content))
-    return query_data_content
-
-def query_content_junkscore(test_case):
-    """
-    Main junk feature
-    Retrive junkscore and then recalulate if can't find
-    """
-    #! Fixme  
-    def extract_score(x):
-        #2 62454ea1becd94109a8a229d {'class': 'junk', 'score': 0.0}
-        if isinstance(x, dict):
-            return x['score']
-        else:
-            print("cant find x['score']")
-            return 0.1
-
-    import time
-    import pandas as pd
-    from bson.objectid import ObjectId
-    # find junk score
-    start_time = time.time()
-    query_data_content = retrive_junk_score(test_case)
-
-    # create dummy table
-    junkcol_name = ['_id', 'contentId', 'junkOutput', 'textDiversity']
-    junkcol_df = pd.DataFrame({},columns = junkcol_name)
-
-    # merge result with dummy table
-    contentfiltering_df = pd.concat([junkcol_df, pd.DataFrame(query_data_content)])
-    contentfiltering_df = contentfiltering_df.drop('_id', axis=1)
-    contentfiltering_df = contentfiltering_df.rename({'contentId':'content_id','junkOutput':'junkscore'},axis = 1)
-    print('contentfiltering_df', contentfiltering_df.head())
-    contentfiltering_df['junkscore'] = contentfiltering_df['junkscore'].fillna(0).apply(extract_score) # Call extract_score(.apply function)
-    contentfiltering_df['textDiversity'] = contentfiltering_df['textDiversity'].fillna(0.1) #add diversity
-    print(" retrieve junk score --- %s seconds ---" % (time.time() - start_time))
-    
-    #find not have score
-    contentid_no_junk_score = list(set(test_case) - set(contentfiltering_df['content_id'].tolist()))
-    result = contentfiltering_df.copy() #return contentfiltering_df if all contents have junk score
-    print('len no junk = ',len(contentid_no_junk_score))
-
-    # junk score = 0 if not have
-    #find not have score
-    contentid_no_junk_score = list(set(test_case) - set(contentfiltering_df['content_id'].tolist()))
-    result = contentfiltering_df.copy() #return contentfiltering_df if all contents have junk score
-    print('len no junk = ',len(contentid_no_junk_score))
-
-    df_null = pd.DataFrame(contentid_no_junk_score).rename({0:'content_id'},axis = 1)
-    result = pd.concat([result, df_null])
-    result['junkscore'] = result['junkscore'].fillna(0.1)
-    result['textDiversity'] = result['textDiversity'].fillna(0.1)
-    
-    print(" recalulate -> df_junkscore --- %s seconds ---" % (time.time() - start_time))
-    return result
-#----------------------------------------------------------------------------------------------------------------
-
-def _add_fields(
-    mongo_client, 
-    result_df: pd.DataFrame) -> pd.DataFrame:
     '''
-    @title add fields to result (app-db.guestfeeditems)
-        Add authorId in collection guestfeeditems
-        Add originalContent = originalPost._id
-        Add originalAuthor = originalPost.author.id
+    check existence of the user's model artifact
     '''
-    import numpy as np
 
-    # Add authorId -> author
-    _project = {
-        'contentId': 1, 
-        'authorId': 1
-    }
+    # find for ml artifact of the account and return boolean of existence
+    existence = mongo_client[src_database_name][src_collection_name].find({'account': account_id})
+    
+    return existence
 
-    _get_authorId_df = pd.DataFrame(list(
-        mongo_client['analytics-db']['contentStats'].find(
-            {}, _project
-            )
-        )
-    )
+# define function to get country code of the account
+def get_country_code(mongo_client,
+                     account_id,
+                     app_db: str,
+                     account_collection: str
+                     ):
 
-    _get_authorId_df = _get_authorId_df.drop(['_id'], axis=1, errors='ignore')
-    _get_authorId_df = _get_authorId_df.rename(columns={'contentId': 'content'})
+    '''
+    find country code from geolocation of the user if absent, default country code "us" will be apply. This function will execute when there is not model artifact
+    '''
+    
+    # geolocation checker
+    # case: has geolocation
+    if len(list(mongo_client[app_db][account_collection].find({'_id': account_id, 
+                                                   'geolocation.countryCode': {'$exists': True}}
+                                                  ))) != 0:
 
-    # drop authorId from the result_df before join
-    result_df = result_df.drop(['authorId', 'author'], axis=1, errors='ignore')
+        print('user has geolocation')
 
-    result_df = pd.merge(result_df, _get_authorId_df, how='left', on='content')
-    result_df = result_df.rename(columns={'authorId': 'author'})
+        # get country code
+        temp = mongo_client[app_db][account_collection].find({'_id': account_id}, 
+                                                             {'_id': 0,
+                                                              'countryCode':'$geolocation.countryCode'})
+        
+        # assign country code
+        country_code = temp[0]['countryCode']
+     
+    # case does not have geolocation
+    else:
+        
+        
+        print('user does not have geolocation')
+        
+        # set country code to US
+        country_code = "us"
 
-    # Add originalPost
-    _aggreate = [
+    
+    return country_code
+
+# define load model artifact to database function
+def load_model_from_mongodb(mongo_client,
+                            src_database_name: str,
+                            src_collection_name: str, 
+                            model_name: str, 
+                            account_id):
+
+    '''
+    retrieve model artifact of the user in case of present or country model artifact in case of model artifact absent
+    '''    
+    
+    json_data = {} # pre-define model as json format
+    
+    # find model as corresponding account id
+    data = mongo_client[src_database_name][src_collection_name].find({
+                                                                      'account': account_id,
+                                                                      'model': model_name
+    })
+
+    # loop throgh schema
+    for i in data:
+        
+        json_data = i
+        
+    # get model artifact
+    pickled_model = json_data['artifact']
+
+    return pickle.loads(pickled_model)
+
+# define feature preparation function from content id list
+def prepare_features(mongo_client,
+                     content_id_list, 
+                     analytics_db: str,
+                     content_stats_collection: str,
+                     creator_stats_collection: str):
+
+    '''
+    feature preparation from "contentStats" & "creatorStats" for ultilize as feature in model prediction
+    '''
+    
+    # define cursor of content features
+    contentFeaturesCursor = [
         {
+            # filter for only correspond contents
             '$match': {
-                'originalPost': {
-                    '$exists': True
+                'contentId': {
+                    '$in': content_id_list 
                 }
             }
         }, {
+            # join with creator stats
+            '$lookup': {
+                'from': creator_stats_collection, # previous:'creatorStats',
+                'localField': 'authorId',
+                'foreignField': '_id',
+                'as': 'creatorStats'
+            }
+        }, {
+            # deconstruct array
+            '$unwind': {
+                'path': '$creatorStats',
+                'preserveNullAndEmptyArrays': True
+            }
+        }, {
+            # map output format
             '$project': {
-                'content': '$_id', 
-                'originalContent': '$originalPost._id', 
-                'originalAuthor': '$originalPost.author.id'
+                '_id': 0, # change to 0 from 1
+                'contentId': 1,
+                'likeCount': 1,
+                'commentCount': 1,
+                'recastCount': 1,
+                'quoteCount': 1,
+                'photoCount': 1,
+                'characterLength': 1,
+                'creatorContentCount' :'$creatorStats.contentCount',
+                'creatorLikedCount': '$creatorStats.creatorLikedCount',
+                'creatorCommentedCount': '$creatorStats.creatorCommentedCount',
+                'creatorRecastedCount': '$creatorStats.creatorRecastedCount',
+                'creatorQuotedCount': '$creatorStats.creatorQuotedCount',
+                'ageScore': '$aggregator.ageScore',
+                'updatedAt': 1
             }
         }
     ]
-    _get_original_post_df = pd.DataFrame(list(
-        mongo_client['app-db']['contents'].aggregate(_aggreate)
-        ))
-    _get_original_post_df = _get_original_post_df.drop(['_id'], axis=1, errors='ignore')
-    # drop authorId from the result_df before join
-    result_df = result_df.drop(['originalContent', 'originalAuthor'], axis=1, errors='ignore')
-    result_df = pd.merge(result_df, _get_original_post_df, how='left', on='content')
 
-    # clean NaN -> None
-    result_df = result_df.replace({np.nan: None})
-
-    return result_df
-
-def cold_start_by_counytry_scroing( mongo_client,
-                                    updatedAtThreshold,
-                                    saved_model = 'mlArtifacts_country',
-                                    saved_data = 'guestfeeditems',
-                                    saved_data_temp = 'guestfeeditemstemps',
-                                    model_name = 'xgboost'
-                                    ):
+    # assign result to dataframe
+    # alias 'contentFeatures_1'
+    content_features = pd.DataFrame(list(mongo_client[analytics_db][content_stats_collection].aggregate(contentFeaturesCursor))).rename({'_id':'contentId'},axis = 1)
     
+    return content_features
 
-    import pickle
-    from datetime import datetime
-    from pprint import pprint
-    from datetime import datetime, timedelta
-    import pymongo
 
-    # connect to database
-    appDb = mongo_client['app-db']
-    analyticsDb = mongo_client['analytics-db']
+# define function to formating output
+def convert_lists_to_dict(string_content_id_list, 
+                          prediction_scores):
 
-    # define feature preparation function from content id list
-    def prepare_features(mongo_client, 
-                     analytics_db: str,
-                     content_stats_collection: str,
-                     creator_stats_collection: str,
-                     updatedAtThreshold = updatedAtThreshold):
+    '''
+    convert output (content IDs & prediction scores) into dictionary/json facilitating return response
+    '''
+
+    result = {}
+    
+    for index, _ in enumerate(prediction_scores):
         
-        from mongo_client import mongo_client as client #! Fixme
-        # define cursor of content features
-        contentFeaturesCursor = [
-               {
-            # filter age of contents for only newer than specific days
-                '$match': {
-                    'updatedAt': {
-                        '$gte': (datetime.utcnow() - timedelta(days=updatedAtThreshold))
-                    }
-                }
-            }, {
-            # join with creator stats
-                '$lookup': {
-                    'from': creator_stats_collection, # previous:'creatorStats',
-                    'localField': 'authorId',
-                    'foreignField': '_id',
-                    'as': 'creatorStats'
-                }
-            }, {
-            # deconstruct array
-                '$unwind': {
-                    'path': '$creatorStats',
-                    'preserveNullAndEmptyArrays': True
-                }
-            }, {
-            # map output format
-                '$project': {
-                    '_id': 1,
-                    'likeCount': 1,
-                    'commentCount': 1,
-                    'recastCount': 1,
-                    'quoteCount': 1,
-                    'photoCount': 1,
-                    'characterLength': 1,
-                    'creatorContentCount' :'$creatorStats.contentCount',
-                    'creatorLikedCount': '$creatorStats.creatorLikedCount',
-                    'creatorCommentedCount': '$creatorStats.creatorCommentedCount',
-                    'creatorRecastedCount': '$creatorStats.creatorRecastedCount',
-                    'creatorQuotedCount': '$creatorStats.creatorQuotedCount',
-                    'ageScore': '$aggregator.ageScore',
-                    'updatedAt': 1
-                }
+        result[string_content_id_list[index]] = prediction_scores[index]
+    
+    return result
+
+def prediction_fail_response(event) -> dict:
+    # convert to object id & distinct
+    no_set_contents = event.get('contents', None)
+    
+    set_contents = set(no_set_contents)
+    content_id_list = [content for content in set_contents]
+    string_content_id_list = list(content_id_list)
+
+    fail_result_dict = { i : 0 for i in string_content_id_list }
+
+    return fail_result_dict
+
+# define main function
+def personalized_content_predict_main(event,
+                                      mongo_client,
+                                      src_database_name: str,
+                                      src_collection_name: str,
+                                      analytics_db: str,
+                                      app_db: str,
+                                      account_collection: str,
+                                      ml_arifact_country_collection: str,
+                                      creator_stats_collection: str,
+                                      content_stats_collection: str,
+                                      model_name: str):
+    import time
+    
+    '''
+    main function of personalize content model prediction
+    1. check database
+    2. get input
+    3. loading model
+    4. feature preparation
+    5. model prediction
+    6. construct result schemas
+    '''
+    print("=============================================================")
+    start = time.time()
+    print("[Start] :", start)
+    # 1. check database
+    t1_start = time.time()
+    print("[Start] Check database:", t1_start)
+
+    #mongodb check collection exists
+    appDB = mongo_client[app_db]
+    anaDB = mongo_client[src_database_name]
+    coll_appDB = appDB.list_collection_names()
+    coll_anaDB = anaDB.list_collection_names()
+
+    account_collection_return = appDB[account_collection].aggregate([
+        {
+            "$limit": 1
+        }, {
+            "$project": {
+                "_id": 1
             }
-        ]
-        # assign result to dataframe
-        # alias 'contentFeatures'
+        }
+    ])
 
-        #content_features = pd.DataFrame(list(mongo_client[analytics_db][content_stats_collection].aggregate(contentFeaturesCursor))).rename({'_id':'contentId'},axis = 1)
- 
-        # create dummy table
-        features_name = ['updatedAt', 'contentId', 'likeCount', 'photoCount', 'characterLength', 'ageScore', 'commentCount', 'recastCount', 'quoteCount', 'creatorContentCount', 'creatorLikedCount', 'creatorCommentedCount', 'creatorRecastedCount', 'creatorQuotedCount']
-        content_features = pd.DataFrame({},columns = features_name)
+    content_stats_collection_return = anaDB[content_stats_collection].aggregate([
+        {
+            "$limit": 1
+        }, {
+            "$project": {
+                "_id": 1
+            }
+        }
+    ])
 
-        # query feature
-        mycol_contentStats = mongo_client['analytics-db']['contentStats']
-        query_contentStats = list(mycol_contentStats.aggregate(contentFeaturesCursor))
+    creator_stats_collection_return = anaDB[creator_stats_collection].aggregate([
+        {
+            "$limit": 1
+        }, {
+            "$project": {
+                "_id": 1
+            }
+        }
+    ])
 
-        # merge result with dummy table
-        query_contentStats_df = pd.concat([content_features, pd.DataFrame(query_contentStats).rename({'_id':'contentId'},axis = 1)]).fillna(0) # null -> 0
-        #print('query_contentStats_df', query_contentStats_df.head())
- 
-        return query_contentStats_df
+    account_collection_size = len(list(account_collection_return))
+    content_stats_collection_size = len(list(content_stats_collection_return))
+    creator_stats_collection_size = len(list(creator_stats_collection_return))
 
-    contentFeatures = prepare_features(mongo_client = mongo_client, # default
-                                        analytics_db = 'analytics-db',
-                                        content_stats_collection = 'contentStats',
-                                        creator_stats_collection = 'creatorStats',
-                                        updatedAtThreshold = updatedAtThreshold).rename({'updatedAt':'origin'},axis = 1)
-    # connect to needed collections
-    mlArtifacts_country = analyticsDb[saved_model]
-    artifact_list = pd.DataFrame(list(mlArtifacts_country.find()))
-    
-    saved_data_country = appDb[saved_data]
-    
-    saved_data_country_temporary = appDb[saved_data_temp]
-    
-    # prepare temporary storage
-    saved_data_country_temporary.drop({})
-    
-    # load model by country function
-    def load_model_from_mongodb(collection, model_name, account):
-        json_data = {}
-        data = collection.find({
-            'account': account,
-            'model': model_name
-        })
-    
-        for i in data:
-            json_data = i
-    
-        pickled_model = json_data['artifact']
-    
-        return pickle.loads(pickled_model)
-    
-    result = pd.DataFrame() # storage for result 
-    
-    # loop for all country list  
-    for countryId in list(artifact_list.account.unique()):
+    if (account_collection in coll_appDB) and (account_collection_size == 0):
+        account_collection_doc_missing = True
+    else:
+        account_collection_doc_missing = False
+
+    if (content_stats_collection in coll_anaDB) and (content_stats_collection_size == 0):
+        content_stats_collection_doc_missing = True
+    else:
+        content_stats_collection_doc_missing = False
+
+    if (creator_stats_collection in coll_anaDB) and (creator_stats_collection_size == 0):
+        creator_stats_collection_doc_missing = True
+    else:
+        creator_stats_collection_doc_missing = False
+
+    if account_collection_doc_missing \
+        or content_stats_collection_doc_missing \
+        or creator_stats_collection_doc_missing:
+
+        print('there is no document in', app_db, account_collection)
+        print('or', src_database_name, content_stats_collection)
+        print('or', src_database_name, creator_stats_collection)
+        t1_end = time.time()
+        print("[End] If check database fail:", t1_end)
+        print("[Time] Check database fail", t1_end - t1_start)
+        print("=============================================================")
+    else:
+
+        t2_start = time.time()
+        print("[Start] If check database success, Getting input:", t2_start)
+        # 2. get input
+        # convert to object id
+        account_id = ObjectId(event.get('accountId', None))
         
-        pprint(countryId)
-        # load model 
-        model_load = load_model_from_mongodb(collection=mlArtifacts_country,
-                                     account= countryId,
-                                     model_name= model_name)
+        print("accountId:", account_id)
         
-        contentFeatures_for_scoring = contentFeatures.drop(['origin'], axis=1)
+        # convert to object id & distinct
+        content_id_list = [ObjectId(content) for content in list(set(event.get('contents', None)))]
         
-        # scoring process
-        contentFeatures_for_pred = contentFeatures_for_scoring.drop(['contentId'], axis = 1)
-        model_predict_content = model_load.predict(contentFeatures_for_pred)
-        score = pd.DataFrame(model_predict_content, columns = ['score'])
+        # define string of content id for response
+        string_content_id_list = list(set(event.get('contents', None)))
         
-        # set up schema
-        content_list = contentFeatures[['contentId']].reset_index(drop = True)
-        content_score = pd.concat([content_list,score],axis =1)
-        content_score['countryCode'] = countryId
-        content_score['type'] = "content"
-        content_score['updatedAt'] = datetime.utcnow() 
-        content_score['createdAt'] = datetime.utcnow() 
-        content_score = content_score.rename({"contentId":"content"},axis = 1)
+        print('len content id list', len(content_id_list))
+
+        # check existence of personalize content artifact of the account 
+        existence = account_artifact_checker(mongo_client,
+                                            src_database_name=src_database_name,
+                                            src_collection_name=src_collection_name, 
+                                            account_id=account_id)
+
+        t2_end = time.time()
+        print("[End] Getting input:", t2_end)
+        print("[Time] Getting input:", t2_end - t2_start)
+        print("=============================================================")
         
-        # add decay function 
-        content_score_add_decay_function = content_score.merge(contentFeatures[['contentId','origin']],right_on = 'contentId', left_on = 'content', how = 'inner')
-        list_contentId = content_score_add_decay_function['content'].tolist()
-        print('contentId: ', list_contentId)
+        # 3. loading model
+        t3_start = time.time()
+        print("[Start] Loading model:", t3_start)
+        # case mlArtifacts exists
         
-        # Retreive additional score #! Fixme
-        junk_score_df = query_content_junkscore(list_contentId).rename(columns={'content_id': 'content'})  #! Fixme
-        content_score_add_decay_function = content_score_add_decay_function.merge(junk_score_df, on = 'content', how = 'left')
-        content_score_add_decay_function['junkscore'] = content_score_add_decay_function['junkscore'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
-        content_score_add_decay_function['textDiversity'] = content_score_add_decay_function['textDiversity'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
-        print('result_junk: ', content_score_add_decay_function['junkscore'].tolist())
-        print('textDiversity: ', content_score_add_decay_function['textDiversity'].tolist())
-        #print('result_column', content_score_add_decay_function.columns.tolist())
+        if len(list(existence)) != 0: #! in testing, use ""== 0" in deployment use "!= 0"
             
-        # Personalize scoring
-        content_score_add_decay_function['time_decay'] = 1/((content_score_add_decay_function['createdAt']-content_score_add_decay_function['origin']).dt.total_seconds()/3600)
-        content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']*content_score_add_decay_function['junkscore']*content_score_add_decay_function['textDiversity'] #! Fixme
-        content_score = content_score_add_decay_function[['content','score','countryCode','type','updatedAt','createdAt']]
-        #print('result: ', content_score_add_decay_function)
-        
-        #set limit
-        content_score = content_score.sort_values(by='score', ascending=False)
-        print("content_score.shape1: " , content_score.shape)
-        content_score = content_score.iloc[:2000,] #not reach to 2000 (1008)
-        print("content_score.shape2: " , content_score.shape)
-        #print("content_score.sample: " , content_score.iloc[:5,])
-        
-        # append result
-        result = result.append(content_score)
-        print("len result: " , len(result))
-        #print("result.sample: " , result[:5])
+            #!
+            print('case: mlArtifact exists')
+            
+            # perform model loading function
+            xg_reg = load_model_from_mongodb(mongo_client,
+                                            src_database_name=src_database_name,
+                                            src_collection_name= src_collection_name,
+                                            model_name= model_name,
+                                            account_id=account_id)
 
-        # join authorId in result
-        result = _add_fields(mongo_client=mongo_client, result_df=result)
+            t3_1_end = time.time()
+            print("[End] Artifact exists:", t3_1_end)
+            print("[Time] Loading model, artifact exists:", t3_1_end - t3_start)
+            print("=============================================================")
         
-     # update collection
-    result.reset_index(inplace=False)
-    
-    
-    #-- remove contentID from result
-    #data_dict_df = pd.DataFrame(data_dict) #result
-    print('result', result.head())
-    print('len result', len(result))
-    
-    list_contents = result['content'].tolist()
-    # find deleted
-    deleted_list = retrive_deleted_contents(list_contents)
-    
-    # remove deleted list
-    result = result[~result['content'].isin(deleted_list)]
-    print('len remove deleted', len(result))
-    print('result.columns', result.columns.tolist())
-    
-    data_dict = result.to_dict("records")
-    
-    # save to temporary storage
-    saved_data_country_temporary.insert_many(data_dict)
-    print('done_save')
+        # case mlArtifacts does not exists, the model come from coldstart
+        else:
+            
+            #!
+            print('case: mlArtifact not exists')
+            
+            # get country code
+            country_code = get_country_code(mongo_client=mongo_client, account_id=account_id, app_db=app_db, account_collection=account_collection)
 
-    # save to target stoage
-    saved_data_country_temporary.rename(saved_data, dropTarget = True)
-    print('done_move')
+            #!
+            print('country code:', country_code)    
+            
+            # perform model loading function
+            xg_reg = load_model_from_mongodb(mongo_client,
+                                            src_database_name=src_database_name,
+                                            src_collection_name= ml_arifact_country_collection,
+                                            model_name= model_name,
+                                            account_id=country_code)
+
+            t3_2_end = time.time()
+            print("[End] Artifact not exists:", t3_2_end)
+            print("[Time] Loading model, artifact not exists:", t3_2_end - t3_start)
+            print("=============================================================")
+
+        t3_end = time.time()
+        print("[End] Loading model:", t3_end)
+        print("[Time] Loading model", t3_end - t3_start)
+        print("=============================================================")
+        # 4. feature preparation
+        t4_start = time.time()
+        print("[Start] Feature preparation:", t4_start)
+        # prepare_features
+        content_features = prepare_features(mongo_client,
+                                            content_id_list,
+                                            analytics_db = analytics_db,
+                                            content_stats_collection = content_stats_collection,
+                                            creator_stats_collection = creator_stats_collection).rename({'updatedAt':'origin'},axis = 1)
+        
+        print('len of content feature', len(content_features))
+
+        t4_end = time.time()
+        print("[End] Feature preparation:", t4_end)
+        print("[Time] Feature preparation:", t4_end - t4_start)
+        print("=============================================================")
+        
+        # 5. model prediction
+        t5_start = time.time()
+        print("[Start] Model prediction:", t5_start)
+        # define result format
+        try:
+            prediction_scores = [float(score) for score in (xg_reg.predict(content_features.drop(['contentId','origin'], axis = 1)))]
+            
+            print("len prediction_scores:",len(prediction_scores))
+
+            # 6. construct result schemas
+            result = convert_lists_to_dict(string_content_id_list = list(content_features['contentId']), prediction_scores = prediction_scores)
+            result = pd.DataFrame(list(result.items()),columns=['contentId', 'score'])
+            # add created date in ordeer to use decay function
+            result = result.merge(content_features[['contentId','origin']], on = 'contentId', how = 'inner')
+            result['time_decay'] = 1/((datetime.utcnow() - result['origin']).dt.total_seconds()/3600)
+            result['score'] = result['score']*result['time_decay']
+            result = result.sort_values(by='score', ascending=False)
+            result = convert_lists_to_dict(string_content_id_list = list(result['contentId'].astype(str)), prediction_scores = list(result['score']))
     
-    saved_data_country.create_index([("countryCode", pymongo.DESCENDING)])
+
+            print("len result:",len(result))
+        
+            response = {
+            'code': 200,
+            'result': result,
+            'remark': 'OK'
+            }
+
+            t5_1_end = time.time()
+            print("[End] Model prediction:", t5_1_end)
+            print("[Time] Model prediction, can predict:", t5_1_end - t5_start)
+            print("=============================================================")
+
+        except Exception as e:
+
+            fail_response = prediction_fail_response(event=event)
+            print("Exception: {0}".format(e))
+
+            response = {
+            'code': 1001,
+            'result': fail_response,
+            'remark': """Sorry, Can not predict the contents 
+                please change the contents."""
+            }
+
+            t5_2_end = time.time()
+            print("[End] Model prediction:", t5_2_end)
+            print("[Time] Model prediction, cannot predict", t5_2_end - t5_start)
+            print("=============================================================")
     
-def coldstart_score_main(
-        mongo_client,
-        updatedAtThreshold) -> None:
-    
-    cold_start_by_counytry_scroing( mongo_client,
-                                    updatedAtThreshold = updatedAtThreshold,
-                                    saved_model = 'mlArtifacts_country',
-                                    saved_data = 'guestfeeditems',
-                                    saved_data_temp = 'guestfeeditemstemp',
-                                    model_name = 'xgboost')
-    return
+    return response
