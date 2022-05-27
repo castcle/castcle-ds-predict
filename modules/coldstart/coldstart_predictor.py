@@ -65,7 +65,7 @@ def query_content_junkscore(test_case):
         if isinstance(x, dict):
             return x['score']
         else:
-            print("cant find x['score']")
+            #print("cant find x['score']")
             return 0.1
 
     import time
