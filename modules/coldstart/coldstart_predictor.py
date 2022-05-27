@@ -274,7 +274,7 @@ def cold_start_by_counytry_scroing( mongo_client,
     
     # prepare temporary storage
     saved_data_country_temporary.drop({})
-    
+
     # load model by country function
     def load_model_from_mongodb(collection, model_name, account):
         json_data = {}
@@ -291,105 +291,120 @@ def cold_start_by_counytry_scroing( mongo_client,
         return pickle.loads(pickled_model)
     
     result = pd.DataFrame() # storage for result 
-    
-    # loop for all country list  
-    for countryId in list(artifact_list.account.unique()):
-        
-        pprint(countryId)
-        # load model 
-        model_load = load_model_from_mongodb(collection=mlArtifacts_country,
-                                     account= countryId,
-                                     model_name= model_name)
-        
-        contentFeatures_for_scoring = contentFeatures.drop(['origin'], axis=1)
-        
-        # scoring process
-        contentFeatures_for_pred = contentFeatures_for_scoring.drop(['contentId'], axis = 1)
-        model_predict_content = model_load.predict(contentFeatures_for_pred)
-        score = pd.DataFrame(model_predict_content, columns = ['score'])
-        
-        # set up schema
-        content_list = contentFeatures[['contentId']].reset_index(drop = True)
-        content_score = pd.concat([content_list,score],axis =1)
-        content_score['countryCode'] = countryId
-        content_score['type'] = "content"
-        content_score['updatedAt'] = datetime.utcnow() 
-        content_score['createdAt'] = datetime.utcnow() 
-        content_score = content_score.rename({"contentId":"content"},axis = 1)
-        
-        # add decay function 
-        content_score_add_decay_function = content_score.merge(contentFeatures[['contentId','origin']],right_on = 'contentId', left_on = 'content', how = 'inner')
-        list_contentId = content_score_add_decay_function['content'].tolist()
-        print('contentId: ', list_contentId)
-        
-        # Retreive additional score #! Fixme
-        junk_score_df = query_content_junkscore(list_contentId).rename(columns={'content_id': 'content'})  #! Fixme
-        content_score_add_decay_function = content_score_add_decay_function.merge(junk_score_df, on = 'content', how = 'left')
-        content_score_add_decay_function['junkscore'] = content_score_add_decay_function['junkscore'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
-        content_score_add_decay_function['textDiversity'] = content_score_add_decay_function['textDiversity'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
-        print('result_junk: ', content_score_add_decay_function['junkscore'].tolist())
-        print('textDiversity: ', content_score_add_decay_function['textDiversity'].tolist())
-        #print('result_column', content_score_add_decay_function.columns.tolist())
-            
-        # Personalize scoring
-        content_score_add_decay_function['time_decay'] = 1/((content_score_add_decay_function['createdAt']-content_score_add_decay_function['origin']).dt.total_seconds()/3600)
-        content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']*content_score_add_decay_function['junkscore']*content_score_add_decay_function['textDiversity'] #! Fixme
-        content_score = content_score_add_decay_function[['content','score','countryCode','type','updatedAt','createdAt']]
-        #print('result: ', content_score_add_decay_function)
-        
-        #set limit
-        content_score = content_score.sort_values(by='score', ascending=False)
-        print("content_score.shape1: " , content_score.shape)
-        content_score = content_score.iloc[:2000,] #not reach to 2000 (1008)
-        print("content_score.shape2: " , content_score.shape)
-        #print("content_score.sample: " , content_score.iloc[:5,])
-        
-        # append result
-        result = result.append(content_score)
-        print("len result: " , len(result))
-        #print("result.sample: " , result[:5])
+    try:
+        # loop for all country list  
+        for countryId in list(artifact_list.account.unique()):
 
-        # join authorId in result
-        result = _add_fields(mongo_client=mongo_client, result_df=result)
-        
-     # update collection
-    result.reset_index(inplace=False)
-    
-    
-    #-- remove contentID from result
-    #data_dict_df = pd.DataFrame(data_dict) #result
-    print('result', result.head())
-    print('len result', len(result))
-    
-    list_contents = result['content'].tolist()
-    # find deleted
-    deleted_list = retrive_deleted_contents(list_contents)
-    
-    # remove deleted list
-    result = result[~result['content'].isin(deleted_list)]
-    print('len remove deleted', len(result))
-    print('result.columns', result.columns.tolist())
-    
-    data_dict = result.to_dict("records")
-    
-    # save to temporary storage
-    saved_data_country_temporary.insert_many(data_dict)
-    print('done_save')
+            pprint(countryId)
+            # load model 
+            model_load = load_model_from_mongodb(collection=mlArtifacts_country,
+                                         account= countryId,
+                                         model_name= model_name)
 
-    # save to target stoage
-    saved_data_country_temporary.rename(saved_data, dropTarget = True)
-    print('done_move')
-    
-    saved_data_country.create_index([("countryCode", pymongo.DESCENDING)])
-    
+            contentFeatures_for_scoring = contentFeatures.drop(['origin'], axis=1)
+
+            # scoring process
+            contentFeatures_for_pred = contentFeatures_for_scoring.drop(['contentId'], axis = 1)
+            model_predict_content = model_load.predict(contentFeatures_for_pred)
+            score = pd.DataFrame(model_predict_content, columns = ['score'])
+
+            # set up schema
+            content_list = contentFeatures[['contentId']].reset_index(drop = True)
+            content_score = pd.concat([content_list,score],axis =1)
+            content_score['countryCode'] = countryId
+            content_score['type'] = "content"
+            content_score['updatedAt'] = datetime.utcnow() 
+            content_score['createdAt'] = datetime.utcnow() 
+            content_score = content_score.rename({"contentId":"content"},axis = 1)
+
+            # add decay function 
+            content_score_add_decay_function = content_score.merge(contentFeatures[['contentId','origin']],right_on = 'contentId', left_on = 'content', how = 'inner')
+            list_contentId = content_score_add_decay_function['content'].tolist()
+            print('contentId: ', list_contentId)
+
+            # Retreive additional score #! Fixme
+            junk_score_df = query_content_junkscore(list_contentId).rename(columns={'content_id': 'content'})  #! Fixme
+            content_score_add_decay_function = content_score_add_decay_function.merge(junk_score_df, on = 'content', how = 'left')
+            content_score_add_decay_function['junkscore'] = content_score_add_decay_function['junkscore'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
+            content_score_add_decay_function['textDiversity'] = content_score_add_decay_function['textDiversity'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
+            print('result_junk: ', content_score_add_decay_function['junkscore'].tolist())
+            print('textDiversity: ', content_score_add_decay_function['textDiversity'].tolist())
+            #print('result_column', content_score_add_decay_function.columns.tolist())
+
+            # Personalize scoring
+            content_score_add_decay_function['time_decay'] = 1/((content_score_add_decay_function['createdAt']-content_score_add_decay_function['origin']).dt.total_seconds()/3600)
+            content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']*content_score_add_decay_function['junkscore']*content_score_add_decay_function['textDiversity'] #! Fixme
+            content_score = content_score_add_decay_function[['content','score','countryCode','type','updatedAt','createdAt']]
+            #print('result: ', content_score_add_decay_function)
+
+            #set limit
+            content_score = content_score.sort_values(by='score', ascending=False)
+            print("content_score.shape1: " , content_score.shape)
+            content_score = content_score.iloc[:2000,] #not reach to 2000 (1008)
+            print("content_score.shape2: " , content_score.shape)
+            #print("content_score.sample: " , content_score.iloc[:5,])
+
+            # append result
+            result = result.append(content_score)
+            print("len result: " , len(result))
+            #print("result.sample: " , result[:5])
+
+            # join authorId in result
+            result = _add_fields(mongo_client=mongo_client, result_df=result)
+
+         # update collection
+        result.reset_index(inplace=False)
+
+        #-- remove contentID from result
+        #data_dict_df = pd.DataFrame(data_dict) #result
+        print('result', result.head())
+        print('len result', len(result))
+
+        list_contents = result['content'].tolist()
+        # find deleted
+        deleted_list = retrive_deleted_contents(list_contents)
+
+        # remove deleted list
+        result = result[~result['content'].isin(deleted_list)]
+        print('len remove deleted', len(result))
+        print('result.columns', result.columns.tolist())
+
+        data_dict = result.to_dict("records")
+
+        # save to temporary storage
+        saved_data_country_temporary.insert_many(data_dict)
+        print('done_save')
+
+        # save to target stoage
+        saved_data_country_temporary.rename(saved_data, dropTarget = True)
+        print('done_move')
+
+        saved_data_country.create_index([("countryCode", pymongo.DESCENDING)])
+        
+        response = {
+            'code': 200,
+            'result': result,
+            'remark': 'OK'
+            }
+    except Exception as e:
+        fail_response = "Exception: {0}".format(e)
+        print(fail_response)
+
+        response = {
+        'code': 1001,
+        'result': fail_response,
+        'remark': """Sorry, Can not predict the contents 
+            please change the contents."""
+        }
+    return response
 def coldstart_score_main(
         mongo_client,
         updatedAtThreshold) -> None:
     
-    cold_start_by_counytry_scroing( mongo_client,
+    response = cold_start_by_counytry_scroing( mongo_client,
                                     updatedAtThreshold = updatedAtThreshold,
                                     saved_model = 'mlArtifacts_country',
                                     saved_data = 'guestfeeditems',
                                     saved_data_temp = 'guestfeeditemstemp',
                                     model_name = 'xgboost')
-    return
+    return response
