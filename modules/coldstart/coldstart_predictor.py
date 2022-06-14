@@ -50,7 +50,8 @@ def retrive_junk_score(testcase):
     # retrive content in contentfiltering
     query_data_content = list(mycol_contentfiltering.aggregate([
                                          {'$match': {'contentId': {'$in':testcase}}}
-                                                             ,{'$project': {'_id' : 1 ,'contentId':1,'junkOutput':1,'textDiversity':1}}]))
+                                                             ,{'$project': {'_id' : 1 ,'contentId':1,'junkOutput':1,'textDiversity':1,'prDetect':1
+                                                                           }}]))
     print('all = ', len(testcase),'-> havescore = ', len(query_data_content))
     return query_data_content
 
@@ -65,7 +66,20 @@ def query_content_junkscore(test_case):
         if isinstance(x, dict):
             return x['score']
         else:
+            #print("cant find x['score']")
             return 0.1
+        
+    def convert_pr_score(x):
+      """
+      convert pr score to factor score
+      """
+      if x == 0: #non-PR
+        x = 1
+      elif x == 0.5: #wallet but not have keyword (airdrop/claim)
+        x = 0.5
+      elif x == 1: #PR (wallet address + keyword)
+        x = 0.25
+      return 
 
     import time
     import pandas as pd
@@ -75,7 +89,7 @@ def query_content_junkscore(test_case):
     query_data_content = retrive_junk_score(test_case)
 
     # create dummy table
-    junkcol_name = ['_id', 'contentId', 'junkOutput', 'textDiversity']
+    junkcol_name = ['_id', 'contentId', 'junkOutput', 'textDiversity','prDetect':1]
     junkcol_df = pd.DataFrame({},columns = junkcol_name)
 
     # merge result with dummy table
@@ -85,6 +99,7 @@ def query_content_junkscore(test_case):
     print('contentfiltering_df', contentfiltering_df.head())
     contentfiltering_df['junkscore'] = contentfiltering_df['junkscore'].fillna(0).apply(extract_score) # Call extract_score(.apply function)
     contentfiltering_df['textDiversity'] = contentfiltering_df['textDiversity'].fillna(0.1) #add diversity
+    contentfiltering_df['prDetect'] = contentfiltering_df['prDetect'].fillna(1).apply(convert_pr_score) #add PR_DETECT
     print(" retrieve junk score --- %s seconds ---" % (time.time() - start_time))
     
     #find not have score
@@ -102,6 +117,7 @@ def query_content_junkscore(test_case):
     result = pd.concat([result, df_null])
     result['junkscore'] = result['junkscore'].fillna(0.1)
     result['textDiversity'] = result['textDiversity'].fillna(0.1)
+    result['prDetect'] = result['prDetect'].fillna(1)
     
     print(" recalulate -> df_junkscore --- %s seconds ---" % (time.time() - start_time))
     return result
@@ -326,13 +342,15 @@ def cold_start_by_counytry_scroing( mongo_client,
             content_score_add_decay_function = content_score_add_decay_function.merge(junk_score_df, on = 'content', how = 'left')
             content_score_add_decay_function['junkscore'] = content_score_add_decay_function['junkscore'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
             content_score_add_decay_function['textDiversity'] = content_score_add_decay_function['textDiversity'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
+            content_score_add_decay_function['prDetect'] = content_score_add_decay_function['prDetect']  #[0.0-1.0] ->[0.01-1.01]
             print('result_junk: ', content_score_add_decay_function['junkscore'].tolist())
             print('textDiversity: ', content_score_add_decay_function['textDiversity'].tolist())
+            print('prDetect: ', content_score_add_decay_function['prDetect'].tolist())
             #print('result_column', content_score_add_decay_function.columns.tolist())
 
             # Personalize scoring
             content_score_add_decay_function['time_decay'] = 1/((content_score_add_decay_function['createdAt']-content_score_add_decay_function['origin']).dt.total_seconds()/3600)
-            content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']*content_score_add_decay_function['junkscore']*content_score_add_decay_function['textDiversity'] #! Fixme
+            content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']*content_score_add_decay_function['junkscore']*content_score_add_decay_function['textDiversity']*content_score_add_decay_function['prDetect'] #! Fixme
             content_score = content_score_add_decay_function[['content','score','countryCode','type','updatedAt','createdAt']]
             #print('result: ', content_score_add_decay_function)
 
