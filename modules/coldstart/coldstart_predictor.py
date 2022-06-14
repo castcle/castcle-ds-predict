@@ -89,7 +89,7 @@ def query_content_junkscore(test_case):
     query_data_content = retrive_junk_score(test_case)
 
     # create dummy table
-    junkcol_name = ['_id', 'contentId', 'junkOutput', 'textDiversity','prDetect':1]
+    junkcol_name = ['_id', 'contentId', 'junkOutput', 'textDiversity','prDetect']
     junkcol_df = pd.DataFrame({},columns = junkcol_name)
 
     # merge result with dummy table
