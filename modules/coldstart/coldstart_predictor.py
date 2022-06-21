@@ -50,7 +50,7 @@ def retrive_junk_score(testcase):
     # retrive content in contentfiltering
     query_data_content = list(mycol_contentfiltering.aggregate([
                                          {'$match': {'contentId': {'$in':testcase}}}
-                                                             ,{'$project': {'_id' : 1 ,'contentId':1,'junkOutput':1,'textDiversity':1,'prDetect':1
+                                                             ,{'$project': {'_id' : 1 ,'contentId':1,'junkOutput':1,'textDiversity':1,'prDetect':1,'language':1
                                                                            }}]))
     print('all = ', len(testcase),'-> havescore = ', len(query_data_content))
     return query_data_content
@@ -306,10 +306,24 @@ def cold_start_by_counytry_scroing( mongo_client,
         return pickle.loads(pickled_model)
     
     result = pd.DataFrame() # storage for result 
+    keep_countryId = []
     try:
         # loop for all country list  
         for countryId in list(artifact_list.account.unique()):
-
+            def recheck_language(x):
+                """
+                input = language
+                output = language score
+                ex. input = th
+                if input(th) like en/th score will = 1 else 0.5
+                """
+                x = x.lower()
+                countryId = countryId.lower()
+                if x == countryId or x == 'en':
+                    return 1
+                else:
+                    return 0.5
+            keep_countryId.append(countryId)
             pprint(countryId)
             # load model 
             model_load = load_model_from_mongodb(collection=mlArtifacts_country,
@@ -343,6 +357,7 @@ def cold_start_by_counytry_scroing( mongo_client,
             content_score_add_decay_function['junkscore'] = content_score_add_decay_function['junkscore'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
             content_score_add_decay_function['textDiversity'] = content_score_add_decay_function['textDiversity'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
             content_score_add_decay_function['prDetect'] = content_score_add_decay_function['prDetect']  #[0.0-1.0] ->[0.01-1.01]
+            content_score_add_decay_function['language'] = content_score_add_decay_function['language'].apply(recheck_language)  #[0.0-1.0] 
             print('result_junk: ', content_score_add_decay_function['junkscore'].tolist())
             print('textDiversity: ', content_score_add_decay_function['textDiversity'].tolist())
             print('prDetect: ', content_score_add_decay_function['prDetect'].tolist())
@@ -350,7 +365,7 @@ def cold_start_by_counytry_scroing( mongo_client,
 
             # Personalize scoring
             content_score_add_decay_function['time_decay'] = 1/((content_score_add_decay_function['createdAt']-content_score_add_decay_function['origin']).dt.total_seconds()/3600)
-            content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']*content_score_add_decay_function['junkscore']*content_score_add_decay_function['textDiversity']*content_score_add_decay_function['prDetect'] #! Fixme
+            content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']*content_score_add_decay_function['junkscore']*content_score_add_decay_function['textDiversity']*content_score_add_decay_function['prDetect']*content_score_add_decay_function['language'] #! Fixme
             content_score = content_score_add_decay_function[['content','score','countryCode','type','updatedAt','createdAt']]
             #print('result: ', content_score_add_decay_function)
 
@@ -376,6 +391,7 @@ def cold_start_by_counytry_scroing( mongo_client,
         #data_dict_df = pd.DataFrame(data_dict) #result
         print('result', result.head())
         print('len result', len(result))
+        print('keep_countryId', keep_countryId)
 
         list_contents = result['content'].tolist()
         # find deleted
