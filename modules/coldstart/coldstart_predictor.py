@@ -79,7 +79,7 @@ def query_content_junkscore(test_case):
         x = 0.5
       elif x == 1: #PR (wallet address + keyword)
         x = 0.25
-      return 
+      return x
 
     import time
     import pandas as pd
@@ -314,20 +314,7 @@ def cold_start_by_counytry_scroing( mongo_client,
             keep_countryId.append(countryId)
             pprint('countryId', countryId)
             
-            def recheck_language(x):
-                """
-                input = language
-                output = language score
-                ex. input = th
-                if input(th) like en/th score will = 1 else 0.5
-                """
-                global countryId
-                x = x.lower()
-                countryId = countryId.lower()
-                if x == countryId or x == 'en':
-                    return 1
-                else:
-                    return 0.5
+
                 
             # load model 
             model_load = load_model_from_mongodb(collection=mlArtifacts_country,
@@ -354,7 +341,22 @@ def cold_start_by_counytry_scroing( mongo_client,
             content_score_add_decay_function = content_score.merge(contentFeatures[['contentId','origin']],right_on = 'contentId', left_on = 'content', how = 'inner')
             list_contentId = content_score_add_decay_function['content'].tolist()
             print('contentId: ', list_contentId)
-
+            
+            def recheck_language(x):
+                """
+                input = language
+                output = language score
+                ex. input = th
+                if input(th) like en/th score will = 1 else 0.5
+                """
+                global countryId
+                x = x.lower()
+                countryId = countryId.lower()
+                if x == countryId or x == 'en':
+                    return 1
+                else:
+                    return 0.5
+                
             # Retreive additional score #! Fixme
             junk_score_df = query_content_junkscore(list_contentId).rename(columns={'content_id': 'content'})  #! Fixme
             content_score_add_decay_function = content_score_add_decay_function.merge(junk_score_df, on = 'content', how = 'left')
