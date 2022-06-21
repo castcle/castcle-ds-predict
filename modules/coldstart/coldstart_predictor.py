@@ -316,6 +316,8 @@ def cold_start_by_counytry_scroing( mongo_client,
             keep_countryId.append(countryId)
             print('countryId', pprint)
             pprint(countryId)
+            countryId_str = pprint.pformat(countryId)
+            print('countryId_str', countryId_str)
             
             def recheck_language(x):
                 """
@@ -325,8 +327,7 @@ def cold_start_by_counytry_scroing( mongo_client,
                 if input(th) like en/th score will = 1 else 0.5
                 """
                 print('1')
-                global countryId
-                print(countryId)
+                global countryId_str
                 if isinstance(x, str):
                     x = x.lower()
                 if isinstance(countryId, str):
