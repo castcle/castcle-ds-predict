@@ -314,9 +314,13 @@ def cold_start_by_counytry_scroing( mongo_client,
         for countryId in list(artifact_list.account.unique()):
 
             keep_countryId.append(countryId)
-            print('countryId', pprint)
+            print('countryId', countryId)
+            print(type(countryId))
             pprint(countryId)
-            countryId_str = pprint.pformat(countryId)
+            try:
+                countryId_str = str(countryId)
+            except:
+                countryId_str = countryId
             print('countryId_str', countryId_str)
             
             def recheck_language(x):
@@ -326,7 +330,6 @@ def cold_start_by_counytry_scroing( mongo_client,
                 ex. input = th
                 if input(th) like en/th score will = 1 else 0.5
                 """
-                print('1')
                 global countryId_str
                 if isinstance(x, str):
                     x = x.lower()
