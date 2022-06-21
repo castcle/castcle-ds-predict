@@ -351,10 +351,10 @@ def cold_start_by_counytry_scroing( mongo_client,
                 if input(th) like en/th score will = 1 else 0.5
                 """
                 global countryId
-                countryId  = str(countryId)
                 print(countryId)
                 if isinstance(x, str):
                     x = x.lower()
+                if isinstance(countryId, str):
                     countryId = countryId.lower()
                 if x == countryId or x == 'en':
                     return 1
@@ -369,7 +369,7 @@ def cold_start_by_counytry_scroing( mongo_client,
             content_score_add_decay_function['junkscore'] = content_score_add_decay_function['junkscore'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
             content_score_add_decay_function['textDiversity'] = content_score_add_decay_function['textDiversity'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
             content_score_add_decay_function['prDetect'] = content_score_add_decay_function['prDetect']  #[0.0-1.0] ->[0.01-1.01]
-            print('language: ', content_score_add_decay_function['language'].tolist())
+            print('language01: ', content_score_add_decay_function['language'].tolist())
             content_score_add_decay_function['language'] = content_score_add_decay_function['language'].apply(recheck_language)  #[0.0-1.0] 
             print('result_junk: ', content_score_add_decay_function['junkscore'].tolist())
             print('textDiversity: ', content_score_add_decay_function['textDiversity'].tolist())
