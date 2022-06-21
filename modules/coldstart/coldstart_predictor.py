@@ -312,10 +312,9 @@ def cold_start_by_counytry_scroing( mongo_client,
         for countryId in list(artifact_list.account.unique()):
 
             keep_countryId.append(countryId)
-            pprint('countryId', countryId)
-            
-
-                
+            print('countryId')
+            pprint(countryId)
+                        
             # load model 
             model_load = load_model_from_mongodb(collection=mlArtifacts_country,
                                          account= countryId,
