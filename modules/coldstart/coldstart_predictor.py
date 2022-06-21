@@ -351,6 +351,8 @@ def cold_start_by_counytry_scroing( mongo_client,
                 if input(th) like en/th score will = 1 else 0.5
                 """
                 global countryId
+                countryId  = str(countryId)
+                print(countryId)
                 if isinstance(x, str):
                     x = x.lower()
                     countryId = countryId.lower()
