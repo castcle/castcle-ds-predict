@@ -89,7 +89,7 @@ def query_content_junkscore(test_case):
     query_data_content = retrive_junk_score(test_case)
 
     # create dummy table
-    junkcol_name = ['_id', 'contentId', 'junkOutput', 'textDiversity','prDetect']
+    junkcol_name = ['_id', 'contentId', 'junkOutput', 'textDiversity','prDetect', 'language'] #! Fixme  
     junkcol_df = pd.DataFrame({},columns = junkcol_name)
 
     # merge result with dummy table
@@ -97,6 +97,7 @@ def query_content_junkscore(test_case):
     contentfiltering_df = contentfiltering_df.drop('_id', axis=1)
     contentfiltering_df = contentfiltering_df.rename({'contentId':'content_id','junkOutput':'junkscore'},axis = 1)
     print('contentfiltering_df', contentfiltering_df.head())
+    #! Fixme  
     contentfiltering_df['junkscore'] = contentfiltering_df['junkscore'].fillna(0).apply(extract_score) # Call extract_score(.apply function)
     contentfiltering_df['textDiversity'] = contentfiltering_df['textDiversity'].fillna(0.1) #add diversity
     contentfiltering_df['prDetect'] = contentfiltering_df['prDetect'].fillna(1).apply(convert_pr_score) #add PR_DETECT
@@ -112,7 +113,8 @@ def query_content_junkscore(test_case):
     contentid_no_junk_score = list(set(test_case) - set(contentfiltering_df['content_id'].tolist()))
     result = contentfiltering_df.copy() #return contentfiltering_df if all contents have junk score
     print('len no junk = ',len(contentid_no_junk_score))
-
+    
+    #! Fixme  
     df_null = pd.DataFrame(contentid_no_junk_score).rename({0:'content_id'},axis = 1)
     result = pd.concat([result, df_null])
     result['junkscore'] = result['junkscore'].fillna(0.1)
