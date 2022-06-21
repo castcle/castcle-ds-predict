@@ -310,6 +310,10 @@ def cold_start_by_counytry_scroing( mongo_client,
     try:
         # loop for all country list  
         for countryId in list(artifact_list.account.unique()):
+
+            keep_countryId.append(countryId)
+            pprint('countryId', countryId)
+            
             def recheck_language(x):
                 """
                 input = language
@@ -324,8 +328,7 @@ def cold_start_by_counytry_scroing( mongo_client,
                     return 1
                 else:
                     return 0.5
-            keep_countryId.append(countryId)
-            pprint(countryId)
+                
             # load model 
             model_load = load_model_from_mongodb(collection=mlArtifacts_country,
                                          account= countryId,
@@ -358,6 +361,7 @@ def cold_start_by_counytry_scroing( mongo_client,
             content_score_add_decay_function['junkscore'] = content_score_add_decay_function['junkscore'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
             content_score_add_decay_function['textDiversity'] = content_score_add_decay_function['textDiversity'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
             content_score_add_decay_function['prDetect'] = content_score_add_decay_function['prDetect']  #[0.0-1.0] ->[0.01-1.01]
+            print('language: ', content_score_add_decay_function['language'].tolist())
             content_score_add_decay_function['language'] = content_score_add_decay_function['language'].apply(recheck_language)  #[0.0-1.0] 
             print('result_junk: ', content_score_add_decay_function['junkscore'].tolist())
             print('textDiversity: ', content_score_add_decay_function['textDiversity'].tolist())
