@@ -314,9 +314,30 @@ def cold_start_by_counytry_scroing( mongo_client,
         for countryId in list(artifact_list.account.unique()):
 
             keep_countryId.append(countryId)
-            print('countryId')
+            print('countryId', pprint)
             pprint(countryId)
-                        
+            
+            def recheck_language(x):
+                """
+                input = language
+                output = language score
+                ex. input = th
+                if input(th) like en/th score will = 1 else 0.5
+                """
+                print('1')
+                global countryId
+                print(countryId)
+                if isinstance(x, str):
+                    x = x.lower()
+                if isinstance(countryId, str):
+                    countryId = countryId.lower()
+                if x == countryId or x == 'en':
+                    return 1
+                elif x == 'nan' or x == None or x == 'None':
+                    return 0.75
+                else:
+                    return 0.5
+                
             # load model 
             model_load = load_model_from_mongodb(collection=mlArtifacts_country,
                                          account= countryId,
@@ -343,25 +364,7 @@ def cold_start_by_counytry_scroing( mongo_client,
             list_contentId = content_score_add_decay_function['content'].tolist()
             print('contentId: ', list_contentId)
             
-            def recheck_language(x):
-                """
-                input = language
-                output = language score
-                ex. input = th
-                if input(th) like en/th score will = 1 else 0.5
-                """
-                global countryId
-                print(countryId)
-                if isinstance(x, str):
-                    x = x.lower()
-                if isinstance(countryId, str):
-                    countryId = countryId.lower()
-                if x == countryId or x == 'en':
-                    return 1
-                elif x == 'nan' or x == None or x == 'None':
-                    return 0.75
-                else:
-                    return 0.5
+
                 
             # Retreive additional score #! Fixme
             junk_score_df = query_content_junkscore(list_contentId).rename(columns={'content_id': 'content'})  #! Fixme
