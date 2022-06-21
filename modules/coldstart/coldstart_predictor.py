@@ -310,13 +310,14 @@ def cold_start_by_counytry_scroing( mongo_client,
     try:
         # loop for all country list  
         for countryId in list(artifact_list.account.unique()):
-            def recheck_language(x):
+            def recheck_language(x, countryId):
                 """
                 input = language
                 output = language score
                 ex. input = th
                 if input(th) like en/th score will = 1 else 0.5
                 """
+                global countryId
                 x = x.lower()
                 countryId = countryId.lower()
                 if x == countryId or x == 'en':
