@@ -314,23 +314,17 @@ def cold_start_by_counytry_scroing( mongo_client,
         for countryId in list(artifact_list.account.unique()):
 
             keep_countryId.append(countryId)
-            print('countryId', countryId)
-            print(type(countryId))
             pprint(countryId)
-            try:
-                countryId_str = str(countryId)
-            except:
-                countryId_str = countryId
-            print('countryId_str', countryId_str)
+            countryId = str(countryId)
+            print('countryId', countryId)
             
-            def recheck_language(x):
+            def recheck_language(x, countryId):
                 """
                 input = language
                 output = language score
                 ex. input = th
                 if input(th) like en/th score will = 1 else 0.5
                 """
-                global countryId_str
                 if isinstance(x, str):
                     x = x.lower()
                 if isinstance(countryId_str, str):
@@ -377,7 +371,7 @@ def cold_start_by_counytry_scroing( mongo_client,
             content_score_add_decay_function['textDiversity'] = content_score_add_decay_function['textDiversity'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
             content_score_add_decay_function['prDetect'] = content_score_add_decay_function['prDetect']  #[0.0-1.0] ->[0.01-1.01]
             print('language01: ', content_score_add_decay_function['language'].tolist())
-            content_score_add_decay_function['language'] = content_score_add_decay_function['language'].apply(recheck_language)  #[0.0-1.0] 
+            content_score_add_decay_function['language'] = content_score_add_decay_function.apply(lambda x: recheck_language(x['language'], countryId), axis=1) #[0.0-1.0] 
             print('result_junk: ', content_score_add_decay_function['junkscore'].tolist())
             print('textDiversity: ', content_score_add_decay_function['textDiversity'].tolist())
             print('prDetect: ', content_score_add_decay_function['prDetect'].tolist())
