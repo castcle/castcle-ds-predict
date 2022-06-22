@@ -50,7 +50,7 @@ def retrive_junk_score(testcase):
     # retrive content in contentfiltering
     query_data_content = list(mycol_contentfiltering.aggregate([
                                          {'$match': {'contentId': {'$in':testcase}}}
-                                                             ,{'$project': {'_id' : 1 ,'contentId':1,'junkOutput':1,'textDiversity':1,'prDetect':1
+                                                             ,{'$project': {'_id' : 1 ,'contentId':1,'junkOutput':1,'textDiversity':1,'prDetect':1,'language':1
                                                                            }}]))
     print('all = ', len(testcase),'-> havescore = ', len(query_data_content))
     return query_data_content
@@ -79,7 +79,9 @@ def query_content_junkscore(test_case):
         x = 0.5
       elif x == 1: #PR (wallet address + keyword)
         x = 0.25
-      return 
+      else:
+        x = 1
+      return x
 
     import time
     import pandas as pd
@@ -89,7 +91,7 @@ def query_content_junkscore(test_case):
     query_data_content = retrive_junk_score(test_case)
 
     # create dummy table
-    junkcol_name = ['_id', 'contentId', 'junkOutput', 'textDiversity','prDetect']
+    junkcol_name = ['_id', 'contentId', 'junkOutput', 'textDiversity','prDetect', 'language'] #! Fixme  
     junkcol_df = pd.DataFrame({},columns = junkcol_name)
 
     # merge result with dummy table
@@ -97,6 +99,7 @@ def query_content_junkscore(test_case):
     contentfiltering_df = contentfiltering_df.drop('_id', axis=1)
     contentfiltering_df = contentfiltering_df.rename({'contentId':'content_id','junkOutput':'junkscore'},axis = 1)
     print('contentfiltering_df', contentfiltering_df.head())
+    #! Fixme  
     contentfiltering_df['junkscore'] = contentfiltering_df['junkscore'].fillna(0).apply(extract_score) # Call extract_score(.apply function)
     contentfiltering_df['textDiversity'] = contentfiltering_df['textDiversity'].fillna(0.1) #add diversity
     contentfiltering_df['prDetect'] = contentfiltering_df['prDetect'].fillna(1).apply(convert_pr_score) #add PR_DETECT
@@ -112,7 +115,8 @@ def query_content_junkscore(test_case):
     contentid_no_junk_score = list(set(test_case) - set(contentfiltering_df['content_id'].tolist()))
     result = contentfiltering_df.copy() #return contentfiltering_df if all contents have junk score
     print('len no junk = ',len(contentid_no_junk_score))
-
+    
+    #! Fixme  
     df_null = pd.DataFrame(contentid_no_junk_score).rename({0:'content_id'},axis = 1)
     result = pd.concat([result, df_null])
     result['junkscore'] = result['junkscore'].fillna(0.1)
@@ -309,8 +313,24 @@ def cold_start_by_counytry_scroing( mongo_client,
     try:
         # loop for all country list  
         for countryId in list(artifact_list.account.unique()):
-
             pprint(countryId)
+            
+            def recheck_language(x, countryId):
+                """
+                input = language
+                output = language score
+                ex. input = th
+                if input(th) like en/th score will = 1 else 0.5
+                """
+                if isinstance(x, str):
+                    x = x.lower()
+                if x == str(countryId).lower() or x == 'en':
+                    return 1
+                elif x == 'nan' or x == None or x == 'None':
+                    return 0.75
+                else:
+                    return 0.5
+                
             # load model 
             model_load = load_model_from_mongodb(collection=mlArtifacts_country,
                                          account= countryId,
@@ -336,21 +356,36 @@ def cold_start_by_counytry_scroing( mongo_client,
             content_score_add_decay_function = content_score.merge(contentFeatures[['contentId','origin']],right_on = 'contentId', left_on = 'content', how = 'inner')
             list_contentId = content_score_add_decay_function['content'].tolist()
             print('contentId: ', list_contentId)
+            
 
+                
             # Retreive additional score #! Fixme
             junk_score_df = query_content_junkscore(list_contentId).rename(columns={'content_id': 'content'})  #! Fixme
             content_score_add_decay_function = content_score_add_decay_function.merge(junk_score_df, on = 'content', how = 'left')
             content_score_add_decay_function['junkscore'] = content_score_add_decay_function['junkscore'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
             content_score_add_decay_function['textDiversity'] = content_score_add_decay_function['textDiversity'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
             content_score_add_decay_function['prDetect'] = content_score_add_decay_function['prDetect']  #[0.0-1.0] ->[0.01-1.01]
+            print('language01: ', content_score_add_decay_function['language'].tolist())
+            content_score_add_decay_function['language'] = content_score_add_decay_function.apply(lambda x: recheck_language(x['language'], countryId), axis=1) #[0.0-1.0] 
             print('result_junk: ', content_score_add_decay_function['junkscore'].tolist())
             print('textDiversity: ', content_score_add_decay_function['textDiversity'].tolist())
             print('prDetect: ', content_score_add_decay_function['prDetect'].tolist())
+            print('language: ', content_score_add_decay_function['language'].tolist())
             #print('result_column', content_score_add_decay_function.columns.tolist())
 
             # Personalize scoring
             content_score_add_decay_function['time_decay'] = 1/((content_score_add_decay_function['createdAt']-content_score_add_decay_function['origin']).dt.total_seconds()/3600)
-            content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']*content_score_add_decay_function['junkscore']*content_score_add_decay_function['textDiversity']*content_score_add_decay_function['prDetect'] #! Fixme
+            print('start calculate content score:', content_score_add_decay_function['score'].tolist())
+            content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay'] #! Fixme
+            print('time_decay pass')
+            content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['junkscore'] #! Fixme
+            print('junkscore pass')
+            content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['textDiversity'] #! Fixme
+            print('textDiversity pass')
+            content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['prDetect'] #! Fixme
+            print('prDetect pass')
+            content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['language'] #! Fixme
+            print('language pass')
             content_score = content_score_add_decay_function[['content','score','countryCode','type','updatedAt','createdAt']]
             #print('result: ', content_score_add_decay_function)
 
