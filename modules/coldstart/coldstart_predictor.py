@@ -380,7 +380,9 @@ def cold_start_by_counytry_scroing( mongo_client,
 
             # Personalize scoring
             content_score_add_decay_function['time_decay'] = 1/((content_score_add_decay_function['createdAt']-content_score_add_decay_function['origin']).dt.total_seconds()/3600)
-            content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']*content_score_add_decay_function['junkscore']*content_score_add_decay_function['textDiversity']*content_score_add_decay_function['prDetect']*content_score_add_decay_function['language'] #! Fixme
+            content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['time_decay']*content_score_add_decay_function['junkscore']*content_score_add_decay_function['textDiversity']*content_score_add_decay_function['prDetect'] #! Fixme
+            print('language', content_score_add_decay_function['language'])
+            content_score_add_decay_function['score'] = content_score_add_decay_function['score']*content_score_add_decay_function['language']
             content_score = content_score_add_decay_function[['content','score','countryCode','type','updatedAt','createdAt']]
             #print('result: ', content_score_add_decay_function)
 
