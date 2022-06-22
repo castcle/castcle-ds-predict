@@ -79,6 +79,8 @@ def query_content_junkscore(test_case):
         x = 0.5
       elif x == 1: #PR (wallet address + keyword)
         x = 0.25
+      else:
+        x = 1
       return x
 
     import time
