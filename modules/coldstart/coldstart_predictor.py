@@ -375,6 +375,7 @@ def cold_start_by_counytry_scroing( mongo_client,
             print('result_junk: ', content_score_add_decay_function['junkscore'].tolist())
             print('textDiversity: ', content_score_add_decay_function['textDiversity'].tolist())
             print('prDetect: ', content_score_add_decay_function['prDetect'].tolist())
+            print('language: ', content_score_add_decay_function['language'].tolist())
             #print('result_column', content_score_add_decay_function.columns.tolist())
 
             # Personalize scoring
