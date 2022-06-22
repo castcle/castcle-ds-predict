@@ -327,9 +327,9 @@ def cold_start_by_counytry_scroing( mongo_client,
                 """
                 if isinstance(x, str):
                     x = x.lower()
-                if isinstance(countryId_str, str):
-                    countryId_str = countryId_str.lower()
-                if x == countryId_str or x == 'en':
+                if isinstance(countryId, str):
+                    countryId = countryId.lower()
+                if x == countryId or x == 'en':
                     return 1
                 elif x == 'nan' or x == None or x == 'None':
                     return 0.75
