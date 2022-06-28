@@ -9,7 +9,6 @@ plugins:
 custom:
   stages:
     - dev
-    - test
     - staging
     - prod
   warmup:
@@ -22,24 +21,19 @@ custom:
       role: ${opt:role, 'arn:aws:iam::044086777883:role/dataAnalyticsLambdaRole'}
   warmupConcurrency:
     dev: 1
-    test: 1
     staging: 1
     prod: 10
   mongoHost:
     dev: dev-cluster.fg2e5.mongodb.net
-    test: test-cluster.9mc2r.mongodb.net
     staging: stg-cluster-pl-0.7ljem.mongodb.net
     prod: prd-cluster-pl-0.5rvfa.mongodb.net
   mongoPassword:
     dev: ${ssm:dev-ds-mongodb-password}
-    test: ${ssm:test-ds-mongodb-password}
     staging: ${ssm:staging-ds-mongodb-password}
     prod: ${ssm:prod-ds-mongodb-password}
   securityGroupIds:
     dev:
       - sg-0a85d287510c750fb
-    test:
-      - sg-0821f0b9421d5c942
     staging:
       - sg-0a676a88fdcd07038
     prod:
@@ -47,8 +41,6 @@ custom:
   subnetIds:
     dev:
       - subnet-06dd909aac8fd1948
-    test:
-      - subnet-090044e7a4daccd43
     staging:
       - subnet-07a1a18b1527f00c7
       - subnet-0587b148568217c70
