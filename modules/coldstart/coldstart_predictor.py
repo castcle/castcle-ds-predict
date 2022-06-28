@@ -356,8 +356,6 @@ def cold_start_by_counytry_scroing( mongo_client,
             content_score_add_decay_function = content_score.merge(contentFeatures[['contentId','origin']],right_on = 'contentId', left_on = 'content', how = 'inner')
             list_contentId = content_score_add_decay_function['content'].tolist()
             print('contentId: ', list_contentId)
-            
-
                 
             # Retreive additional score #! Fixme
             junk_score_df = query_content_junkscore(list_contentId).rename(columns={'content_id': 'content'})  #! Fixme
