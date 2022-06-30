@@ -7,7 +7,7 @@
 # 5. construct result schemas
 
 import pandas as pd
-country_ref = pd.read_csv('country_convert.csv')
+country_ref = pd.read_csv('./modules/coldstart/country_convert.csv')
 #----------------------------------------------------------------------------------------------------------------
 def retrive_deleted_contents(list_content):
     """
