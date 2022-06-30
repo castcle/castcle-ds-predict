@@ -7,6 +7,7 @@
 # 5. construct result schemas
 
 import pandas as pd
+country_ref = pd.read_csv('country_convert.csv')
 #----------------------------------------------------------------------------------------------------------------
 def retrive_deleted_contents(list_content):
     """
@@ -315,22 +316,32 @@ def cold_start_by_counytry_scroing( mongo_client,
         for countryId in list(artifact_list.account.unique()):
             pprint(countryId)
             
-            def recheck_language(x, countryId):
+            def convert_countrycode(countrycode, country_ref):
+                # convert country_code to gcld3_code
+                convert_countrycode = list(country_ref.loc[country_ref['country_code'] == countrycode]['gcld3_code'])
+                if convert_countrycode != []:
+                    countryId = convert_countrycode[0]
+                else:
+                    pass
+                return countrycode
+            
+            def recheck_language(x, countrycode):
                 """
                 input = language
                 output = language score
                 ex. input = th
                 if input(th) like en/th score will = 1 else 0.5
-                """
+                """      
+                # scoring if matched laguage and country
                 if isinstance(x, str):
                     x = x.lower()
-                if x == str(countryId).lower() or x == 'en':
+                if x == str(countrycode).lower() or x == 'en':
                     return 1
                 elif x == 'nan' or x == None or x == 'None':
                     return 0.75
                 else:
-                    return 0
-                
+                    return 0.01
+            
             # load model 
             model_load = load_model_from_mongodb(collection=mlArtifacts_country,
                                          account= countryId,
@@ -358,17 +369,19 @@ def cold_start_by_counytry_scroing( mongo_client,
             print('contentId: ', list_contentId)
                 
             # Retreive additional score #! Fixme
+            countrycode = convert_countrycode(countrycode)
+            print('countrycode:', countrycode)
             junk_score_df = query_content_junkscore(list_contentId).rename(columns={'content_id': 'content'})  #! Fixme
             content_score_add_decay_function = content_score_add_decay_function.merge(junk_score_df, on = 'content', how = 'left')
             content_score_add_decay_function['junkscore'] = content_score_add_decay_function['junkscore'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
             content_score_add_decay_function['textDiversity'] = content_score_add_decay_function['textDiversity'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
             content_score_add_decay_function['prDetect'] = content_score_add_decay_function['prDetect']  #[0.0-1.0] ->[0.01-1.01]
             print('language01: ', content_score_add_decay_function['language'].tolist())
-            content_score_add_decay_function['language'] = content_score_add_decay_function.apply(lambda x: recheck_language(x['language'], countryId), axis=1) #[0.0-1.0] 
+            content_score_add_decay_function['language'] = content_score_add_decay_function.apply(lambda x: recheck_language(x['language'], countrycode), axis=1) #[0.0-1.0] 
             print('result_junk: ', content_score_add_decay_function['junkscore'].tolist())
             print('textDiversity: ', content_score_add_decay_function['textDiversity'].tolist())
             print('prDetect: ', content_score_add_decay_function['prDetect'].tolist())
-            print('language: ', content_score_add_decay_function['language'].tolist())
+            print('language02: ', content_score_add_decay_function['language'].tolist())
             #print('result_column', content_score_add_decay_function.columns.tolist())
 
             # Personalize scoring
