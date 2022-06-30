@@ -316,16 +316,16 @@ def cold_start_by_counytry_scroing( mongo_client,
         for countryId in list(artifact_list.account.unique()):
             pprint(countryId)
             
-            def convert_countrycode(countrycode, country_ref):
+            def convert_countrycode(country_code, country_ref):
                 # convert country_code to gcld3_code
-                convert_countrycode = list(country_ref.loc[country_ref['country_code'] == countrycode]['gcld3_code'])
+                convert_countrycode = list(country_ref.loc[country_ref['country_code'] == country_code]['gcld3_code'])
                 if convert_countrycode != []:
-                    countryId = convert_countrycode[0]
+                    country_code = convert_countrycode[0]
                 else:
                     pass
-                return countrycode
+                return country_code
             
-            def recheck_language(x, countrycode):
+            def recheck_language(x, country_code):
                 """
                 input = language
                 output = language score
@@ -335,7 +335,7 @@ def cold_start_by_counytry_scroing( mongo_client,
                 # scoring if matched laguage and country
                 if isinstance(x, str):
                     x = x.lower()
-                if x == str(countrycode).lower() or x == 'en':
+                if x == str(country_code).lower() or x == 'en':
                     return 1
                 elif x == 'nan' or x == None or x == 'None':
                     return 0.75
@@ -369,15 +369,15 @@ def cold_start_by_counytry_scroing( mongo_client,
             print('contentId: ', list_contentId)
                 
             # Retreive additional score #! Fixme
-            countrycode = convert_countrycode(countrycode)
-            print('countrycode:', countrycode)
+            country_code = convert_countrycode(countryId, country_ref)
+            print('country_code:', country_code)
             junk_score_df = query_content_junkscore(list_contentId).rename(columns={'content_id': 'content'})  #! Fixme
             content_score_add_decay_function = content_score_add_decay_function.merge(junk_score_df, on = 'content', how = 'left')
             content_score_add_decay_function['junkscore'] = content_score_add_decay_function['junkscore'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
             content_score_add_decay_function['textDiversity'] = content_score_add_decay_function['textDiversity'] + 0.01 #[0.0-1.0] ->[0.01-1.01]
             content_score_add_decay_function['prDetect'] = content_score_add_decay_function['prDetect']  #[0.0-1.0] ->[0.01-1.01]
             print('language01: ', content_score_add_decay_function['language'].tolist())
-            content_score_add_decay_function['language'] = content_score_add_decay_function.apply(lambda x: recheck_language(x['language'], countrycode), axis=1) #[0.0-1.0] 
+            content_score_add_decay_function['language'] = content_score_add_decay_function.apply(lambda x: recheck_language(x['language'], country_code), axis=1) #[0.0-1.0] 
             print('result_junk: ', content_score_add_decay_function['junkscore'].tolist())
             print('textDiversity: ', content_score_add_decay_function['textDiversity'].tolist())
             print('prDetect: ', content_score_add_decay_function['prDetect'].tolist())
