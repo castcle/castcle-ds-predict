@@ -340,7 +340,7 @@ def cold_start_by_counytry_scroing( mongo_client,
                 elif x == 'nan' or x == None or x == 'None':
                     return 0.75
                 else:
-                    return 0.01
+                    return 0.0000001
             
             # load model 
             model_load = load_model_from_mongodb(collection=mlArtifacts_country,
