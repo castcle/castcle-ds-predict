@@ -8,6 +8,7 @@
 
 import pandas as pd
 country_ref = pd.read_csv('./modules/coldstart/country_convert.csv')
+country_ref['country_code'] = country_ref['country_code'].str.lower()
 #----------------------------------------------------------------------------------------------------------------
 def retrive_deleted_contents(list_content):
     """
@@ -318,11 +319,12 @@ def cold_start_by_counytry_scroing( mongo_client,
             
             def convert_countrycode(country_code, country_ref):
                 # convert country_code to gcld3_code
-                convert_countrycode = list(country_ref.loc[country_ref['country_code'] == country_code]['gcld3_code'])
+                convert_countrycode = list(country_ref.loc[country_ref['country_code'] == country_code]['gcld3_code'])                
                 if convert_countrycode != []:
                     country_code = convert_countrycode[0]
                 else:
                     pass
+                print('countrycode: ', country_code)
                 return country_code
             
             def recheck_language(x, country_code):
@@ -369,7 +371,7 @@ def cold_start_by_counytry_scroing( mongo_client,
             print('contentId: ', list_contentId)
                 
             # Retreive additional score #! Fixme
-            country_code = convert_countrycode(countryId, country_ref)
+            country_code = convert_countrycode(countryId, country_ref) #if country = VN -> cc = vi
             print('country_code:', country_code)
             junk_score_df = query_content_junkscore(list_contentId).rename(columns={'content_id': 'content'})  #! Fixme
             content_score_add_decay_function = content_score_add_decay_function.merge(junk_score_df, on = 'content', how = 'left')
